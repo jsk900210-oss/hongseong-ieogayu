@@ -196,7 +196,7 @@ export default function ClientHome({ user }: { user: ChatGPTUser | null }) {
             <p>혼자 온 여행자도 금세 친구가 되는 곳.<br/>구옥 스테이 반경 2km의 장소와 참가자 Join을 만나보세요.</p>
             <div className="hero-actions"><button className="primary" onClick={() => move("join")}>Join 시작하기 →</button><button className="text-btn" onClick={() => move("place")}>근처 둘러보기</button></div>
           </div>
-          <div className="hero-art"><span className="sun"/><span className="cloud c1"/><span className="cloud c2"/><span className="mountain"/><span className="sea-line"/><div className="art-sticker">오늘의 홍성<br/><strong>바람 좋음</strong></div></div>
+          <div className="hero-art hongseong-hero" role="img" aria-label="황금 들녘과 홍성 구옥 스테이 풍경"><div className="art-sticker">오늘의 홍성<br/><strong>머물기 좋음</strong></div><span className="hero-photo-label">구옥과 들녘, 이어지는 하루</span></div>
         </section>
         <section className="join-preview"><div className="shell"><div className="section-heading light"><div><span className="mini-label">JOIN · READY</span><h2>{joins.length > 0 ? "지금 참여할 수 있는 Join" : "첫 Join을 기다리고 있어요"}</h2><p>{joins.length > 0 ? `최근 등록된 ${Math.min(joins.length, 3)}개의 모임을 확인해 보세요.` : "계정으로 로그인한 뒤 새로운 Join을 만들어보세요."}</p></div><button onClick={() => move("join")}>{joins.length > 0 ? "전체 Join 보기 →" : "Join 만들기 →"}</button></div>{joins.length > 0 && <div className="join-grid">{joins.slice(0, 3).map((item) => <JoinCard key={item.id} item={item} joined={joined.includes(item.id)} onJoin={() => toggleJoin(item.id, item.status)} />)}</div>}</div></section>
       </>}

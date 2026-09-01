@@ -30,6 +30,8 @@ button { cursor:pointer; }
 .primary { border:0; background:var(--green); color:white; font-weight:700; padding:15px 22px; border-radius:13px; box-shadow:0 7px 0 #154b41; transition:.18s; }.primary:hover{transform:translateY(-2px);box-shadow:0 9px 0 #154b41}.primary span{margin-left:18px}
 .text-btn { border:0; background:none; color:var(--ink); font-weight:700; border-bottom:1px solid #a9b8b4; padding:7px 0; }
 .hero-art { height:420px; border-radius:47% 53% 35% 36%; background:#bde3dc; position:relative; overflow:hidden; box-shadow:15px 16px 0 #e6efe5; }
+.hero-art.hongseong-hero{background-image:linear-gradient(180deg,transparent 55%,rgba(20,58,50,.35)),url('/hongseong-hero.png');background-size:cover;background-position:center;box-shadow:15px 16px 0 #e6efe5,0 18px 45px rgba(32,59,54,.16)}
+.hero-photo-label{position:absolute;left:24px;bottom:20px;color:#fff;font-family:"Gaegu";font-size:18px;font-weight:700;text-shadow:0 2px 8px rgba(20,55,47,.55)}
 .sun { position:absolute; width:72px;height:72px;border-radius:50%;background:#ffd364;right:70px;top:55px;box-shadow:0 0 0 12px rgba(255,211,100,.25)}
 .cloud { position:absolute;width:75px;height:20px;border-radius:30px;background:white;opacity:.75}.cloud:after,.cloud:before{content:"";position:absolute;background:white;border-radius:50%;}.cloud:after{width:30px;height:30px;left:18px;bottom:2px}.cloud:before{width:22px;height:22px;left:40px;bottom:2px}.c1{top:80px;left:55px}.c2{top:130px;right:115px;transform:scale(.7)}
 .mountain { position:absolute; width:270px;height:130px;background:#7cb6a2;clip-path:polygon(0 100%,45% 10%,58% 42%,68% 25%,100% 100%);bottom:120px;left:55px;opacity:.7}
