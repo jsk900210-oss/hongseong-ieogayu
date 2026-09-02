@@ -5,7 +5,7 @@ import "leaflet/dist/leaflet.css";
 import markets from "../../data/hongseong/markets.json";
 import festivals from "../../data/hongseong/festivals.json";
 
-type DiscoveryView = "around" | "markets" | "festivals" | "reviews" | "recommended" | "hikes";
+type DiscoveryView = "around" | "markets" | "festivals" | "reviews" | "recommended" | "hikes" | "camping";
 type Review = { id: number; place: string; category: string; menu: string; rating: number; body: string; author: string; visitedAt: string };
 type UserLocation = { lat: number; lon: number };
 
@@ -73,9 +73,15 @@ const HIKE_POINTS = [
   { name: "백월산", category: "약 394m · 초급~중급", icon: "🥾", lat: 36.594, lon: 126.627 },
   { name: "봉수산", category: "약 484m · 중급", icon: "🥾", lat: 36.622, lon: 126.757 },
 ] as const;
+const CAMPING_SPOTS = [
+  { name: "내포캠핑스퀘어2", area: "용봉산 인근 · 홍북읍", type: "오토캠핑 · 카라반", address: "홍성군 홍북읍 용봉산1길 25-1", phone: "050-7976-4644", reservation: "전화 · 온라인 실시간 예약", facilities: "오토 48면 · 카라반 14면 · 개별 화장실/샤워실", note: "용봉산 산행 전후 숙박에 적합해요. 소형견 동반 가능 여부와 요금은 예약 전 확인하세요.", source: "https://gocamping.or.kr/bsite/camp/info/read.do?c_no=101709&listOrdrTrget=c_rdcnt" },
+  { name: "캠핑 굄성", area: "홍북읍", type: "일반야영장", address: "홍성군 홍북읍 홍북로 810", phone: "0507-1448-1232 · 010-5491-1227", reservation: "온라인 실시간 예약", facilities: "온수풀장 · 개별 화장실 · 체험농장", note: "사계절 운영 정보가 등록되어 있으며, 산책로 이용이 가능해요.", source: "https://www.gocamping.or.kr/bsite/camp/info/read.do?c_no=100721&viewType=read02" },
+  { name: "세울터 오토캠핑장 & 펜션", area: "서부면 · 해안권", type: "일반야영장", address: "홍성군 서부면 홍남서로362번길 46", phone: "041-642-9953 · 010-2056-6498", reservation: "전화 · 온라인 예약대기", facilities: "야외 캠핑장 · 샤워시설 · 개수대", note: "숲으로 둘러싸인 캠핑장입니다. 남당항·서부면 산책 코스와 함께 보기 좋아요.", source: "https://gocamping.or.kr/bsite/camp/info/read.do?c_no=7893&listOrdrTrget=last_updusr_pnttm" },
+  { name: "더선셋 캠핑장", area: "남당항 · 서부면", type: "일반야영장 · 오토캠핑", address: "홍성군 서부면 남당항로213번길 126", phone: "041-631-5207", reservation: "캠핑장 문의", facilities: "일반 25면 · 오토 20면 · 샤워장 · 무인카페", note: "바다·노을·둘레길을 함께 즐길 수 있어요. 반려동물 동반은 불가로 안내되어 있습니다.", source: "https://gocamping.or.kr/bsite/camp/info/read.do?c_no=102236&distance=50%2C50&listOrdrTrget=c_rdcnt&searchLa=36.6452655%2C36.6452655&searchLo=126.6566206%2C126.6566206" },
+] as const;
 const REVIEW_POINTS: readonly { name: string; category: string; icon: string; lat: number; lon: number }[] = [];
 const LIFESTYLE_POINTS: readonly { name: string; category: string; icon: string; lat: number; lon: number }[] = [];
-const CATEGORY_LABELS: Record<DiscoveryView, string> = { around: "전체 장소", markets: "오일장", festivals: "축제", reviews: "메이트 추천 맛집", recommended: "메이트 추천 플레이스", hikes: "등산" };
+const CATEGORY_LABELS: Record<DiscoveryView, string> = { around: "전체 장소", markets: "오일장", festivals: "축제", reviews: "메이트 추천 맛집", recommended: "메이트 추천 플레이스", hikes: "등산", camping: "캠핑" };
 const CATEGORY_DESCRIPTIONS: Record<DiscoveryView, string> = {
   around: "검수된 관광·생활·편의 장소 전체",
   markets: "장날과 위치가 확인된 전통시장",
@@ -83,6 +89,7 @@ const CATEGORY_DESCRIPTIONS: Record<DiscoveryView, string> = {
   reviews: "음식점·카페·베이커리 등 먹거리 장소",
   recommended: "소품샵·미용실·공방 등 비음식 생활 이용 장소",
   hikes: "등산로와 출발 지점이 확인된 산",
+  camping: "공식 등록 캠핑장과 야영장 정보",
 };
 const dateAtStartOfDay = (value: string) => new Date(`${value}T00:00:00+09:00`);
 const festivalState = (festival: FestivalPoint, today = new Date()) => {
@@ -213,6 +220,10 @@ function CategoryMapPanel({ view }: { view: DiscoveryView }) {
   return <div className="map-category-panel"><p className="category-filter-note"><b>{CATEGORY_LABELS[view]}</b>{CATEGORY_DESCRIPTIONS[view]}</p><div className="map-panel"><div className="real-map gps-map gps-active"><HongseongMap userLocation={HONGSEONG_CENTER} items={items} onSelect={setSelectedName} /></div><aside className="result-list ranked-place-list"><div className="result-head"><b>{CATEGORY_LABELS[view]}</b><span>{selectedName ? `${items.findIndex((item) => item.name === selectedName) + 1}번 장소 선택됨` : view === "festivals" ? "가까운 일정순 · 2026.09.02 확인" : "리뷰·추천순"}</span></div><div className="ranked-place-scroll">{items.length ? items.map((item, index) => { const festival = view === "festivals" ? item as FestivalPoint : null; const state = festival ? festivalState(festival) : null; return <button key={item.name} className={`${item.name === selectedName ? "selected-place" : ""}${state ? ` festival-row festival-${state}` : ""}`} onClick={() => setSelectedName(item.name)}><span className="rank-number">{index + 1}</span><span className="place-icon mint">{item.icon}</span><span>{festival && <span className={`festival-state ${state}`}>{state === "ongoing" ? "진행중" : state === "upcoming" ? "진행예정" : state === "ended" ? "일정종료" : "일정 미정"}</span>}<small>{item.category}</small><b>{item.name}</b><p>{festival ? festivalDateLabel(festival) : view === "recommended" ? "메이트가 다시 가고 싶은 생활 장소" : "지도에서 위치를 확인하세요"}</p></span></button>; }) : <div className="empty-filter-result"><span>🔎</span><b>검수 완료된 장소를 준비 중이에요</b><p>메이트 추천과 운영 여부 검수가 완료되면 지도에 표시됩니다.</p></div>}</div></aside></div></div>;
 }
 
+function CampingGuide() {
+  return <section className="camping-guide"><div><span className="mini-label">CAMPING · BACKPACKING</span><h2>홍성에서 머무는 밤</h2><p>공식 등록된 야영장만 안내합니다. 산 정상·등산로의 무단 야영은 금지될 수 있어요.</p></div><div className="camping-grid">{CAMPING_SPOTS.map((camp) => <details key={camp.name}><summary><span>⛺</span><div><small>{camp.area} · {camp.type}</small><b>{camp.name}</b><p>상세 시설·예약 정보 보기</p></div><i>⌄</i></summary><div className="camping-detail"><p><b>주소</b>{camp.address}</p><p><b>문의</b>{camp.phone}</p><p><b>예약</b>{camp.reservation}</p><p><b>시설</b>{camp.facilities}</p><em>{camp.note}</em><a href={camp.source} target="_blank" rel="noreferrer">고캠핑 상세 정보 ↗</a></div></details>)}</div></section>;
+}
+
 export default function LocalDiscovery({ displayName, signedIn, onRequireLogin }: { displayName: string; signedIn: boolean; onRequireLogin: () => void }) {
   const [view, setView] = useState<DiscoveryView>("around");
   const [reviews, setReviews] = useState(seedReviews);
@@ -252,10 +263,10 @@ export default function LocalDiscovery({ displayName, signedIn, onRequireLogin }
     <h1>오늘의 홍성을 발견해요</h1>
     <p className="lead">장날과 축제 소식을 챙기고, 참가자가 직접 찾은 맛을 함께 기록해요.</p>
     <div className="discovery-tabs" role="tablist" aria-label="발견 메뉴">
-      {([['around','전체 장소','🗺️'],['markets','오일장','🏮'],['festivals','축제','🎉'],['reviews','메이트 추천 맛집','🥣'],['recommended','메이트 추천 플레이스','💚'],['hikes','등산','🥾']] as const).map(([key,label,icon]) =>
+      {([['around','전체 장소','🗺️'],['markets','오일장','🏮'],['festivals','축제','🎉'],['reviews','메이트 추천 맛집','🥣'],['recommended','메이트 추천 플레이스','💚'],['hikes','등산','🥾'],['camping','캠핑','⛺']] as const).map(([key,label,icon]) =>
         <button key={key} role="tab" aria-selected={view === key} className={view === key ? "active" : ""} onClick={() => setView(key)}><span>{icon}</span>{label}</button>)}
     </div>
-    <CategoryMapPanel view={view} />
+    {view === "camping" ? <CampingGuide /> : <CategoryMapPanel view={view} />}
 
     {view === "around" && <div className="map-panel"><div className={`real-map gps-map ${userLocation ? "gps-active" : "location-pending"}`}>{userLocation ? <HongseongMap userLocation={userLocation} /> : <div className="map-placeholder"><span className="brand-mark">이</span><b>내 위치에서 홍성을 발견해요</b><small>노트북은 Wi-Fi 기반 위치를 사용하며, 버튼을 누를 때만 권한을 요청합니다</small><button type="button" className="gps-button" onClick={findMe} disabled={locating}>{locating ? "위치 확인 중…" : "◎ 현재 위치로 보기"}</button>{locationMessage && <><em>{locationMessage}</em><button type="button" className="gps-fallback-button" onClick={() => { setUserLocation(HONGSEONG_CENTER); setLocationMessage(""); }}>홍성읍 기준으로 보기</button></>}</div>}</div><div className="result-list"><div className="result-head"><b>{userLocation ? "내 위치에서 얼마나 걸릴까요?" : `홍성 대표 장소 ${PLACES.length}곳`}</b><span>{userLocation ? `${PLACES.length}곳 · 직선거리 기준` : "위치를 켜면 거리를 표시해요"}</span></div>{PLACES.map((place)=><button key={place.name} className={"special" in place && place.special ? "special-place-row" : ""}><span className="place-icon mint">{place.icon}</span><span><small>{place.category}</small><b>{place.name}</b><p>{userLocation ? `현재 위치에서 약 ${distanceKm(userLocation, place).toFixed(1)}km` : "홍성에서 가볍게 다녀오기 좋은 곳"}</p></span></button>)}</div></div>}
 
