@@ -121,7 +121,7 @@ export async function POST(request: Request) {
       },
     });
   } catch {
-    return NextResponse.json({ error: "같은 제목의 Join이 이미 있어요." }, { status: 409 });
+    return NextResponse.json({ error: "Join을 등록하지 못했어요. 잠시 후 다시 시도해 주세요." }, { status: 500 });
   }
 }
 

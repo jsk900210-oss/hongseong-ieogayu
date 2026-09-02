@@ -38,6 +38,8 @@ export const joins = sqliteTable(
     description: text("description").notNull().default(""),
     keyword: text("keyword").notNull().default("기타"),
     location: text("location").notNull(),
+    exactLocation: text("exact_location").notNull().default(""),
+    locationVisibility: text("location_visibility").notNull().default("public"),
     scheduledAt: integer("scheduled_at", { mode: "timestamp" }).notNull(),
     maxParticipants: integer("max_participants").notNull(),
     status: text("status").notNull().default("모집중"),
@@ -45,7 +47,6 @@ export const joins = sqliteTable(
       .notNull()
       .default(sql`(unixepoch())`),
   },
-  (table) => [uniqueIndex("idx_joins_owner_title").on(table.ownerId, table.title)],
 );
 
 export const joinParticipants = sqliteTable(
