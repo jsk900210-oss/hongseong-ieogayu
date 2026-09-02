@@ -57,14 +57,15 @@ const MARKET_POINTS = [
   { name: "광천전통시장", category: "4·9일 오일장", icon: "🏮", lat: 36.5006767661, lon: 126.6249711176 },
   { name: "갈산전통시장", category: "3·8일 오일장", icon: "🏮", lat: 36.6028, lon: 126.5487 },
 ] as const;
-const FESTIVAL_POINTS = [
-  { name: "홍성 남당항 새조개축제", category: "겨울 · 남당항 일원", icon: "🐚", lat: 36.537983719, lon: 126.4710062376 },
-  { name: "홍성역사인물축제", category: "봄 · 홍주읍성 일원", icon: "🏯", lat: 36.5997465556, lon: 126.661159671 },
-  { name: "내포문화축제", category: "가을 · 개최 위치 확인 중", icon: "🎭", lat: 36.601, lon: 126.661 },
-  { name: "홍성 남당항 대하축제", category: "가을 · 남당항 일원", icon: "🦐", lat: 36.5369, lon: 126.473 },
-  { name: "광천김·토굴새우젓 대축제", category: "가을 · 광천전통시장 일원", icon: "🫙", lat: 36.5006767661, lon: 126.6249711176 },
-  { name: "홍성한우 바비큐 페스티벌", category: "가을 · 홍주읍성 일원", icon: "🥩", lat: 36.601, lon: 126.663 },
-  { name: "구항면 국화축제", category: "가을 · 구항면 일원", icon: "🌼", lat: 36.586, lon: 126.611 },
+type FestivalPoint = { name: string; category: string; icon: string; lat: number; lon: number; startDate: string | null; endDate: string | null };
+const FESTIVAL_POINTS: readonly FestivalPoint[] = [
+  { name: "홍성 남당항 새조개축제", category: "남당항 일원", icon: "🐚", lat: 36.537983719, lon: 126.4710062376, startDate: "2026-01-17", endDate: "2026-04-30" },
+  { name: "홍성역사인물축제", category: "홍주읍성 일원", icon: "🏯", lat: 36.5997465556, lon: 126.661159671, startDate: "2026-05-01", endDate: "2026-05-03" },
+  { name: "내포문화축제", category: "개최 위치 확인 중", icon: "🎭", lat: 36.601, lon: 126.661, startDate: null, endDate: null },
+  { name: "홍성 남당항 대하축제", category: "남당항 일원", icon: "🦐", lat: 36.5369, lon: 126.473, startDate: "2026-09-04", endDate: "2026-11-08" },
+  { name: "광천김·토굴새우젓 대축제", category: "광천전통시장 일원", icon: "🫙", lat: 36.5006767661, lon: 126.6249711176, startDate: null, endDate: null },
+  { name: "홍성글로벌바비큐페스티벌", category: "홍주읍성 일원", icon: "🥩", lat: 36.601, lon: 126.663, startDate: "2026-10-29", endDate: "2026-11-01" },
+  { name: "구항면 국화축제", category: "구항면 일원", icon: "🌼", lat: 36.586, lon: 126.611, startDate: null, endDate: null },
 ] as const;
 const HIKE_POINTS = [
   { name: "용봉산", category: "381m · 초급~중급", icon: "🥾", lat: 36.643, lon: 126.65 },
@@ -86,7 +87,25 @@ const CATEGORY_DESCRIPTIONS: Record<DiscoveryView, string> = {
   recommended: "소품샵·미용실·공방 등 비음식 생활 이용 장소",
   hikes: "등산로와 출발 지점이 확인된 산",
 };
-const categoryItems = (view: DiscoveryView) => view === "markets" ? MARKET_POINTS : view === "festivals" ? FESTIVAL_POINTS : view === "reviews" ? REVIEW_POINTS : view === "hikes" ? HIKE_POINTS : view === "recommended" ? LIFESTYLE_POINTS : PLACES;
+const dateAtStartOfDay = (value: string) => new Date(`${value}T00:00:00+09:00`);
+const festivalState = (festival: FestivalPoint, today = new Date()) => {
+  if (!festival.startDate || !festival.endDate) return "unknown" as const;
+  const now = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+  if (now < dateAtStartOfDay(festival.startDate).getTime()) return "upcoming" as const;
+  if (now > dateAtStartOfDay(festival.endDate).getTime()) return "ended" as const;
+  return "ongoing" as const;
+};
+const sortedFestivals = (today = new Date()) => [...FESTIVAL_POINTS].sort((a, b) => {
+  const priority = { ongoing: 0, upcoming: 1, ended: 2, unknown: 3 };
+  const aState = festivalState(a, today); const bState = festivalState(b, today);
+  if (priority[aState] !== priority[bState]) return priority[aState] - priority[bState];
+  if (aState === "ended") return dateAtStartOfDay(b.endDate!).getTime() - dateAtStartOfDay(a.endDate!).getTime();
+  return (a.startDate ? dateAtStartOfDay(a.startDate).getTime() : Infinity) - (b.startDate ? dateAtStartOfDay(b.startDate).getTime() : Infinity);
+});
+const festivalDateLabel = (festival: FestivalPoint) => festival.startDate && festival.endDate
+  ? `${festival.startDate.replaceAll("-", ".")} – ${festival.endDate.replaceAll("-", ".")}`
+  : "2026년 일정 미정";
+const categoryItems = (view: DiscoveryView) => view === "markets" ? MARKET_POINTS : view === "festivals" ? sortedFestivals() : view === "reviews" ? REVIEW_POINTS : view === "hikes" ? HIKE_POINTS : view === "recommended" ? LIFESTYLE_POINTS : PLACES;
 
 const seedReviews: Review[] = [
   { id: 1, place: "시장 안 작은 국밥집", category: "한식", menu: "소머리국밥", rating: 5, body: "장날 아침에 갔는데 국물이 담백하고 혼자 앉기도 편했어요. 상호보다 시장 동문 쪽 빨간 간판을 찾으세요!", author: "해솔", visitedAt: "2026-08-29" },
@@ -197,7 +216,7 @@ function CategoryMapPanel({ view }: { view: DiscoveryView }) {
   const items = useMemo(() => categoryItems(view), [view]);
   const [selectedName, setSelectedName] = useState<string | null>(null);
   useEffect(() => setSelectedName(null), [view]);
-  return <div className="map-category-panel"><p className="category-filter-note"><b>{CATEGORY_LABELS[view]}</b>{CATEGORY_DESCRIPTIONS[view]}</p><div className="map-panel"><div className="real-map gps-map gps-active"><HongseongMap userLocation={HONGSEONG_CENTER} items={items} onSelect={setSelectedName} /></div><aside className="result-list ranked-place-list"><div className="result-head"><b>{CATEGORY_LABELS[view]}</b><span>{selectedName ? `${items.findIndex((item) => item.name === selectedName) + 1}번 장소 선택됨` : "리뷰·추천순"}</span></div><div className="ranked-place-scroll">{items.length ? items.map((item, index)=><button key={item.name} className={item.name === selectedName ? "selected-place" : ""} onClick={() => setSelectedName(item.name)}><span className="rank-number">{index + 1}</span><span className="place-icon mint">{item.icon}</span><span><small>{item.category}</small><b>{item.name}</b><p>{view === "recommended" ? "메이트가 다시 가고 싶은 생활 장소" : "지도에서 위치를 확인하세요"}</p></span></button>) : <div className="empty-filter-result"><span>🔎</span><b>검수 완료된 장소를 준비 중이에요</b><p>메이트 추천과 운영 여부 검수가 완료되면 지도에 표시됩니다.</p></div>}</div></aside></div></div>;
+  return <div className="map-category-panel"><p className="category-filter-note"><b>{CATEGORY_LABELS[view]}</b>{CATEGORY_DESCRIPTIONS[view]}</p><div className="map-panel"><div className="real-map gps-map gps-active"><HongseongMap userLocation={HONGSEONG_CENTER} items={items} onSelect={setSelectedName} /></div><aside className="result-list ranked-place-list"><div className="result-head"><b>{CATEGORY_LABELS[view]}</b><span>{selectedName ? `${items.findIndex((item) => item.name === selectedName) + 1}번 장소 선택됨` : view === "festivals" ? "가까운 일정순 · 2026.09.02 확인" : "리뷰·추천순"}</span></div><div className="ranked-place-scroll">{items.length ? items.map((item, index) => { const festival = view === "festivals" ? item as FestivalPoint : null; const state = festival ? festivalState(festival) : null; return <button key={item.name} className={`${item.name === selectedName ? "selected-place" : ""}${state ? ` festival-row festival-${state}` : ""}`} onClick={() => setSelectedName(item.name)}><span className="rank-number">{index + 1}</span><span className="place-icon mint">{item.icon}</span><span>{festival && <span className={`festival-state ${state}`}>{state === "ongoing" ? "진행중" : state === "upcoming" ? "진행예정" : state === "ended" ? "일정종료" : "일정 미정"}</span>}<small>{item.category}</small><b>{item.name}</b><p>{festival ? festivalDateLabel(festival) : view === "recommended" ? "메이트가 다시 가고 싶은 생활 장소" : "지도에서 위치를 확인하세요"}</p></span></button>; }) : <div className="empty-filter-result"><span>🔎</span><b>검수 완료된 장소를 준비 중이에요</b><p>메이트 추천과 운영 여부 검수가 완료되면 지도에 표시됩니다.</p></div>}</div></aside></div></div>;
 }
 
 export default function LocalDiscovery({ displayName, signedIn, onRequireLogin }: { displayName: string; signedIn: boolean; onRequireLogin: () => void }) {
