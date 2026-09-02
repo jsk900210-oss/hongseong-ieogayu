@@ -18,6 +18,8 @@ export async function GET() {
       interests: users.interests,
       profileVisibility: users.profileVisibility,
       onboardingCompletedAt: users.onboardingCompletedAt,
+      activityScore: users.activityScore,
+      lastActiveAt: users.lastActiveAt,
     })
     .from(users)
     .where(eq(users.id, user.id))

@@ -15,6 +15,8 @@ export const users = sqliteTable(
     interests: text("interests").notNull().default(""),
     profileVisibility: text("profile_visibility").notNull().default("mates"),
     onboardingCompletedAt: integer("onboarding_completed_at", { mode: "timestamp" }),
+    activityScore: integer("activity_score").notNull().default(30),
+    lastActiveAt: integer("last_active_at", { mode: "timestamp" }),
     createdAt: integer("created_at", { mode: "timestamp" })
       .notNull()
       .default(sql`(unixepoch())`),

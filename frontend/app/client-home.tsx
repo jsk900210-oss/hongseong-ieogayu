@@ -34,6 +34,8 @@ type AskResponse = {
   }>;
 };
 
+type ProfileMeta = { interests: string[]; activityScore: number; lastActiveAt: string | null; memberType: "master" | "friends" | "general" | "" };
+
 const ONBOARDING_INTERESTS = ["맛집 탐방", "로컬 창업", "농사·텃밭", "산책·등산", "사진·기록", "함께 요리", "반려동물", "문화·축제"];
 
 export default function ClientHome({ user }: { user: GoogleUser | null }) {
@@ -45,6 +47,7 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState<1 | 2>(1);
   const [savingOnboarding, setSavingOnboarding] = useState(false);
+  const [profileMeta, setProfileMeta] = useState<ProfileMeta>({ interests: [], activityScore: 30, lastActiveAt: null, memberType: "" });
   const [onboardingDraft, setOnboardingDraft] = useState({ memberType: "" as "" | "master" | "friends" | "general", masterCode: "", cohortCode: "", stayPeriod: "2주 체류", stayArea: "", interests: [] as string[], profileVisibility: "private" });
   const [joins, setJoins] = useState<JoinItem[]>([]);
   const [creatingJoin, setCreatingJoin] = useState(false);
@@ -90,7 +93,7 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
     if (!user) return;
     fetch("/api/profile")
       .then((response) => response.ok ? response.json() : null)
-      .then((result: { profile?: { memberType?: "master" | "friends" | "general"; cohortCode?: string; stayPeriod?: string; stayArea?: string; interests?: string; profileVisibility?: string; onboardingCompletedAt?: string | null } } | null) => {
+      .then((result: { profile?: { memberType?: "master" | "friends" | "general"; cohortCode?: string; stayPeriod?: string; stayArea?: string; interests?: string; profileVisibility?: string; activityScore?: number; lastActiveAt?: string | null; onboardingCompletedAt?: string | null } } | null) => {
         const profile = result?.profile;
         if (!profile?.onboardingCompletedAt) setShowOnboarding(true);
         if (profile) setOnboardingDraft({
@@ -101,6 +104,12 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
           stayArea: profile.stayArea ?? "",
           interests: profile.interests ? profile.interests.split(",").filter(Boolean) : [],
           profileVisibility: profile.profileVisibility ?? "mates",
+        });
+        if (profile) setProfileMeta({
+          interests: profile.interests ? profile.interests.split(",").filter(Boolean).slice(0, 5) : [],
+          activityScore: typeof profile.activityScore === "number" ? profile.activityScore : 30,
+          lastActiveAt: profile.lastActiveAt ?? null,
+          memberType: profile.memberType ?? "",
         });
       })
       .catch(() => undefined);
@@ -154,6 +163,7 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
       return;
     }
     setShowOnboarding(false);
+    setProfileMeta((current) => ({ ...current, interests: onboardingDraft.interests, memberType: onboardingDraft.memberType }));
     setToast("기수 인증이 완료됐어요. 홍성에서 만나유!");
     window.setTimeout(() => setToast(""), 2200);
   };
@@ -304,6 +314,7 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
 
       {tab === "profile" && <section className="subpage shell profile-page">
         <div className="profile-head"><div className="avatar">👤</div><div><span className="eyebrow">ACCOUNT</span><h1>{displayName || "내 계정 만들기"}</h1><p>{user ? `${user.email} 계정으로 연결되었습니다.` : "로그인 후 서비스 내부 사용자 계정이 자동으로 생성됩니다."}</p><div className="stats"><span><b>0</b> Join</span><span><b>0</b> 신청</span><span><b>0</b> 참여 기록</span></div></div>{user && <div className="profile-actions"><button type="button" onClick={() => setShowOnboarding(true)}>기수 정보</button><button type="button" onClick={() => setEditingNickname(true)}>닉네임 변경</button></div>}</div>
+        {user && <section className="profile-insights"><div className="profile-keywords"><span className="mini-label">MY ACTIVITY KEYWORDS</span><h2>대표 활동 키워드</h2><p>관심사와 검수 완료 활동을 바탕으로 최대 5개가 표시됩니다.</p><div>{profileMeta.interests.length ? profileMeta.interests.map((interest) => <span key={interest}>#{interest}</span>) : <em>온보딩에서 관심사를 선택해 주세요.</em>}</div></div><div className="activity-temperature"><span className="mini-label">TRUST TEMPERATURE</span><div className="temperature-head"><div><h2>{profileMeta.activityScore}°</h2><p>{profileMeta.activityScore >= 70 ? "정보 신뢰도가 높아요" : profileMeta.activityScore >= 30 ? "활동을 이어가고 있어요" : "첫 정확한 기록을 기다려요"}</p></div><div className="thermometer" aria-label={`활동 온도 ${profileMeta.activityScore}도`}><i style={{height: `${Math.max(7, Math.min(100, profileMeta.activityScore))}%`}} /></div></div><small>기본 30°에서 시작해요. 검수 완료된 정확한 정보는 올리고, 비매너·고의 허위정보가 확인되면 Master 검수 후 감점됩니다. 이후 폐업·휴업·정보 변경은 갱신 제보로만 처리하며 감점하지 않아요.</small></div></section>}
         <div className="keyword-panel" style={{marginTop: 24}}><div className="panel-title"><div><span className="mini-label">PARTICIPANT ACCOUNT</span><h2>{user ? "참가자 계정 연결 완료" : "참가자로 시작하기"}</h2></div><span className="test-badge">{user ? "로그인됨" : "로그인 필요"}</span></div><p>{user ? "기수 인증 후 Join 생성·신청·방문 기록을 참가자 계정별로 관리합니다." : "로컬 데모에서는 테스트 참가자로 바로 둘러볼 수 있어요. 실제 운영에서는 Google 계정으로 연결합니다."}</p>{user ? <a className="primary" href="/api/auth/logout">로그아웃</a> : <a className="primary google-login" href="/api/auth/demo?return_to=/">◎ 테스트 참가자로 로그인</a>}</div>
       </section>}
 
