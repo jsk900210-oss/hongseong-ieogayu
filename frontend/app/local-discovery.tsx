@@ -162,11 +162,11 @@ function HongseongMap({ userLocation, items = PLACES, onSelect }: { userLocation
           .addTo(map!);
       });
 
-      items.forEach((place) => {
+      items.forEach((place, index) => {
         const special = "special" in place && place.special;
         const marker = L.divIcon({
           className: "leaflet-place-icon-shell",
-          html: `<span class="leaflet-place-icon${special ? " special" : ""}${place.name === "남당항" ? " namdang" : ""}">${place.icon}</span>`,
+          html: `<span class="leaflet-place-icon numbered${special ? " special" : ""}">${index + 1}</span>`,
           iconSize: place.name === "남당항" ? [49, 38] : [38, 38],
           iconAnchor: place.name === "남당항" ? [24, 34] : [19, 34],
         });
@@ -193,8 +193,7 @@ function CategoryMapPanel({ view }: { view: DiscoveryView }) {
   const items = useMemo(() => categoryItems(view), [view]);
   const [selectedName, setSelectedName] = useState<string | null>(null);
   useEffect(() => setSelectedName(null), [view]);
-  const orderedItems = useMemo(() => selectedName ? [...items].sort((a, b) => a.name === selectedName ? -1 : b.name === selectedName ? 1 : 0) : items, [items, selectedName]);
-  return <div className="map-category-panel"><p className="category-filter-note"><b>{CATEGORY_LABELS[view]}</b>{CATEGORY_DESCRIPTIONS[view]}</p><div className="map-panel"><div className="real-map gps-map gps-active"><HongseongMap userLocation={HONGSEONG_CENTER} items={items} onSelect={setSelectedName} /></div><aside className="result-list ranked-place-list"><div className="result-head"><b>{selectedName ? "선택한 장소" : CATEGORY_LABELS[view]}</b><span>{selectedName ? "지도에서 선택됨" : "리뷰·추천순"}</span></div><div className="ranked-place-scroll">{orderedItems.length ? orderedItems.map((item, index)=><button key={item.name} className={item.name === selectedName ? "selected-place" : ""} onClick={() => setSelectedName(item.name)}><span className="rank-number">{selectedName && item.name === selectedName ? "✓" : index + 1}</span><span className="place-icon mint">{item.icon}</span><span><small>{item.category}</small><b>{item.name}</b><p>{view === "recommended" ? "메이트가 다시 가고 싶은 생활 장소" : "지도에서 위치를 확인하세요"}</p></span></button>) : <div className="empty-filter-result"><span>🔎</span><b>검수 완료된 장소를 준비 중이에요</b><p>메이트 추천과 운영 여부 검수가 완료되면 지도에 표시됩니다.</p></div>}</div></aside></div></div>;
+  return <div className="map-category-panel"><p className="category-filter-note"><b>{CATEGORY_LABELS[view]}</b>{CATEGORY_DESCRIPTIONS[view]}</p><div className="map-panel"><div className="real-map gps-map gps-active"><HongseongMap userLocation={HONGSEONG_CENTER} items={items} onSelect={setSelectedName} /></div><aside className="result-list ranked-place-list"><div className="result-head"><b>{CATEGORY_LABELS[view]}</b><span>{selectedName ? `${items.findIndex((item) => item.name === selectedName) + 1}번 장소 선택됨` : "리뷰·추천순"}</span></div><div className="ranked-place-scroll">{items.length ? items.map((item, index)=><button key={item.name} className={item.name === selectedName ? "selected-place" : ""} onClick={() => setSelectedName(item.name)}><span className="rank-number">{index + 1}</span><span className="place-icon mint">{item.icon}</span><span><small>{item.category}</small><b>{item.name}</b><p>{view === "recommended" ? "메이트가 다시 가고 싶은 생활 장소" : "지도에서 위치를 확인하세요"}</p></span></button>) : <div className="empty-filter-result"><span>🔎</span><b>검수 완료된 장소를 준비 중이에요</b><p>메이트 추천과 운영 여부 검수가 완료되면 지도에 표시됩니다.</p></div>}</div></aside></div></div>;
 }
 
 export default function LocalDiscovery({ displayName, signedIn, onRequireLogin }: { displayName: string; signedIn: boolean; onRequireLogin: () => void }) {
