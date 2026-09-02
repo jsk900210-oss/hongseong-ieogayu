@@ -49,6 +49,10 @@ export async function GET() {
     .from(joinParticipants)
     .innerJoin(users, eq(joinParticipants.userId, users.id));
   const activeParticipants = participantRows.filter((row) => row.status === "신청");
+  const viewerProfile = viewer
+    ? await db.select({ memberType: users.memberType }).from(users).where(eq(users.id, viewer.id)).limit(1)
+    : [];
+  const isMaster = viewerProfile[0]?.memberType === "master";
 
   return NextResponse.json({
     joins: rows.map((row) => {
@@ -58,6 +62,7 @@ export async function GET() {
         ...toJoinItem(row, row.keyword, now),
         people: participants.length + 1,
         isOwner,
+        canDelete: isOwner || isMaster,
         joined: Boolean(viewer && participants.some((item) => item.userId === viewer.id)),
         participantNames: isOwner ? participants.map((item) => item.displayName) : undefined,
       };

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { GoogleUser } from "./google-auth";
 import LocalDiscovery from "./local-discovery";
 import HongseongWeather from "./hongseong-weather";
@@ -20,6 +20,8 @@ type JoinItem = {
   status: JoinStatus;
   host: string;
   description: string;
+  isOwner?: boolean;
+  canDelete?: boolean;
 };
 
 type AskResponse = {
@@ -48,6 +50,8 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
   const [onboardingStep, setOnboardingStep] = useState<1 | 2>(1);
   const [savingOnboarding, setSavingOnboarding] = useState(false);
   const [profileMeta, setProfileMeta] = useState<ProfileMeta>({ interests: [], activityScore: 30, lastActiveAt: null, memberType: "" });
+  const [avatarPreview, setAvatarPreview] = useState("");
+  const avatarInputRef = useRef<HTMLInputElement>(null);
   const [onboardingDraft, setOnboardingDraft] = useState({ memberType: "" as "" | "master" | "friends" | "general", masterCode: "", cohortCode: "", stayPeriod: "2주 체류", stayArea: "", interests: [] as string[], profileVisibility: "private" });
   const [joins, setJoins] = useState<JoinItem[]>([]);
   const [creatingJoin, setCreatingJoin] = useState(false);
@@ -175,6 +179,18 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
       : current.interests.length < 5 ? [...current.interests, interest] : current.interests,
   }));
 
+  const selectAvatar = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/") || file.size > 2 * 1024 * 1024) {
+      setToast("JPG·PNG·WEBP 이미지, 2MB 이하만 올릴 수 있어요.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setAvatarPreview(typeof reader.result === "string" ? reader.result : "");
+    reader.readAsDataURL(file);
+  };
+
   const saveJoin = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!user) {
@@ -212,6 +228,19 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
     setJoined((current) => current.includes(id) ? current.filter((value) => value !== id) : [...current, id]);
     setToast(joined.includes(id) ? "참여를 취소했어요." : "조인에 참여했어요! 로비에서 만나요 🍊");
     window.setTimeout(() => setToast(""), 1800);
+  };
+
+  const deleteJoin = async (id: number) => {
+    if (!window.confirm("이 Join을 삭제할까요? 참여 신청도 함께 취소됩니다.")) return;
+    const response = await fetch(`/api/joins/${id}`, { method: "DELETE" });
+    const result = await response.json() as { error?: string };
+    if (!response.ok) {
+      setToast(result.error ?? "Join을 삭제하지 못했어요.");
+      return;
+    }
+    setJoins((current) => current.filter((item) => item.id !== id));
+    setJoined((current) => current.filter((value) => value !== id));
+    setToast("Join을 삭제했어요.");
   };
 
   const submitQuestion = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -272,7 +301,7 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
           </div>
           <div className="hero-art hongseong-hero" role="img" aria-label="황금 들녘과 홍성 구옥 스테이 풍경"><HongseongWeather /></div>
         </section>
-        <section className="join-preview"><div className="shell"><div className="section-heading light"><div><span className="mini-label">JOIN · READY</span><h2>{joins.length > 0 ? "지금 참여할 수 있는 Join" : "첫 Join을 기다리고 있어요"}</h2><p>{joins.length > 0 ? `최근 등록된 ${Math.min(joins.length, 3)}개의 모임을 확인해 보세요.` : "계정으로 로그인한 뒤 새로운 Join을 만들어보세요."}</p></div><button onClick={() => move("join")}>{joins.length > 0 ? "전체 Join 보기 →" : "Join 만들기 →"}</button></div>{joins.length > 0 && <div className="join-grid">{joins.slice(0, 3).map((item) => <JoinCard key={item.id} item={item} joined={joined.includes(item.id)} onJoin={() => toggleJoin(item.id, item.status)} />)}</div>}</div></section>
+        <section className="join-preview"><div className="shell"><div className="section-heading light"><div><span className="mini-label">JOIN · READY</span><h2>{joins.length > 0 ? "지금 참여할 수 있는 Join" : "첫 Join을 기다리고 있어요"}</h2><p>{joins.length > 0 ? `최근 등록된 ${Math.min(joins.length, 3)}개의 모임을 확인해 보세요.` : "계정으로 로그인한 뒤 새로운 Join을 만들어보세요."}</p></div><button onClick={() => move("join")}>{joins.length > 0 ? "전체 Join 보기 →" : "Join 만들기 →"}</button></div>{joins.length > 0 && <div className="join-grid">{joins.slice(0, 3).map((item) => <JoinCard key={item.id} item={item} joined={joined.includes(item.id)} onJoin={() => toggleJoin(item.id, item.status)} onDelete={() => deleteJoin(item.id)} />)}</div>}</div></section>
       </>}
 
       {tab === "place" && <LocalDiscovery displayName={displayName} signedIn={Boolean(user)} onRequireLogin={() => window.location.assign("/api/auth/google?return_to=/")} />}
@@ -280,7 +309,7 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
       {tab === "join" && <section className="subpage shell">
         <div className="join-title-row"><div><span className="eyebrow">JOIN</span><h1>{joins.length}개의 홍성 Join</h1></div><button className="primary" onClick={() => user ? setCreatingJoin(true) : window.location.assign("/api/auth/google?return_to=/")}>Join 만들기 <span>＋</span></button></div>
         <div className="join-filters">{keywords.map((item) => <button key={item} className={keyword === item ? "selected" : ""} onClick={() => setKeyword(item)}>{item}</button>)}</div>
-        {visible.length === 0 ? <div className="keyword-panel"><span className="mini-label">EMPTY JOIN</span><h2>등록된 Join이 아직 없어요</h2><p>로그인한 사용자가 첫 Join을 만들면 이곳에 표시됩니다.</p></div> : <div className="join-page-grid">{visible.map((item) => <JoinCard key={item.id} item={item} joined={joined.includes(item.id)} onJoin={() => toggleJoin(item.id, item.status)}/>)}</div>}
+        {visible.length === 0 ? <div className="keyword-panel"><span className="mini-label">EMPTY JOIN</span><h2>등록된 Join이 아직 없어요</h2><p>로그인한 사용자가 첫 Join을 만들면 이곳에 표시됩니다.</p></div> : <div className="join-page-grid">{visible.map((item) => <JoinCard key={item.id} item={item} joined={joined.includes(item.id)} onJoin={() => toggleJoin(item.id, item.status)} onDelete={() => deleteJoin(item.id)}/>)}</div>}
       </section>}
 
       {tab === "ask" && <section className="subpage shell ask-page">
@@ -313,7 +342,7 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
       </section>}
 
       {tab === "profile" && <section className="subpage shell profile-page">
-        <div className="profile-head"><div className="avatar">👤</div><div><span className="eyebrow">ACCOUNT</span><h1>{displayName || "내 계정 만들기"}</h1><p>{user ? `${user.email} 계정으로 연결되었습니다.` : "로그인 후 서비스 내부 사용자 계정이 자동으로 생성됩니다."}</p><div className="stats"><span><b>0</b> Join</span><span><b>0</b> 신청</span><span><b>0</b> 참여 기록</span></div></div>{user && <div className="profile-actions"><button type="button" onClick={() => setShowOnboarding(true)}>기수 정보</button><button type="button" onClick={() => setEditingNickname(true)}>닉네임 변경</button></div>}</div>
+        <div className="profile-head"><button type="button" className="avatar avatar-upload" onClick={() => avatarInputRef.current?.click()} aria-label="프로필 사진 올리기">{avatarPreview ? <img src={avatarPreview} alt="선택한 프로필 사진" /> : "👤"}<i>사진 변경</i></button><input ref={avatarInputRef} className="avatar-file-input" type="file" accept="image/png,image/jpeg,image/webp" onChange={selectAvatar} /><div><span className="eyebrow">ACCOUNT</span><h1>{displayName || "내 계정 만들기"}</h1><p>{user ? `${user.email} 계정으로 연결되었습니다.` : "로그인 후 서비스 내부 사용자 계정이 자동으로 생성됩니다."}</p><div className="stats"><span><b>0</b> Join</span><span><b>0</b> 신청</span><span><b>0</b> 참여 기록</span></div></div>{user && <div className="profile-actions"><button type="button" onClick={() => setShowOnboarding(true)}>기수 정보</button><button type="button" onClick={() => setEditingNickname(true)}>닉네임 변경</button></div>}</div>
         {user && <section className="profile-insights"><div className="profile-keywords"><span className="mini-label">MY ACTIVITY KEYWORDS</span><h2>대표 활동 키워드</h2><p>관심사와 검수 완료 활동을 바탕으로 최대 5개가 표시됩니다.</p><div>{profileMeta.interests.length ? profileMeta.interests.map((interest) => <span key={interest}>#{interest}</span>) : <em>온보딩에서 관심사를 선택해 주세요.</em>}</div></div><div className="activity-temperature"><span className="mini-label">TRUST TEMPERATURE</span><div className="temperature-head"><div><h2>{profileMeta.activityScore}°</h2><p>{profileMeta.activityScore >= 70 ? "정보 신뢰도가 높아요" : profileMeta.activityScore >= 30 ? "활동을 이어가고 있어요" : "첫 정확한 기록을 기다려요"}</p></div><div className="thermometer" aria-label={`활동 온도 ${profileMeta.activityScore}도`}><i style={{height: `${Math.max(7, Math.min(100, profileMeta.activityScore))}%`}} /></div></div><small>기본 30°에서 시작해요. 검수 완료된 정확한 정보는 올리고, 비매너·고의 허위정보가 확인되면 Master 검수 후 감점됩니다. 이후 폐업·휴업·정보 변경은 갱신 제보로만 처리하며 감점하지 않아요.</small></div></section>}
         <div className="keyword-panel" style={{marginTop: 24}}><div className="panel-title"><div><span className="mini-label">PARTICIPANT ACCOUNT</span><h2>{user ? "참가자 계정 연결 완료" : "참가자로 시작하기"}</h2></div><span className="test-badge">{user ? "로그인됨" : "로그인 필요"}</span></div><p>{user ? "기수 인증 후 Join 생성·신청·방문 기록을 참가자 계정별로 관리합니다." : "로컬 데모에서는 테스트 참가자로 바로 둘러볼 수 있어요. 실제 운영에서는 Google 계정으로 연결합니다."}</p>{user ? <a className="primary" href="/api/auth/logout">로그아웃</a> : <a className="primary google-login" href="/api/auth/demo?return_to=/">◎ 테스트 참가자로 로그인</a>}</div>
       </section>}
@@ -328,6 +357,7 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
   );
 }
 
-function JoinCard({ item, joined, onJoin }: { item: JoinItem; joined: boolean; onJoin: () => void }) {
-  return <article className="join-card"><div className="join-visual green"><span>{item.icon}</span><i>{item.status}</i></div><div className="join-body"><div className="tags"><span>#{item.keyword}</span><span>#{item.date.slice(5)}</span></div><h3>{item.title}</h3><p className="join-description">{item.description}</p><p>🕒 {item.date} {item.time}</p><p>📍 {item.location}</p><p>👥 {item.people + (joined ? 1 : 0)}/{item.max}명 · by {item.host}</p><button className={joined ? "joined" : ""} disabled={item.status !== "모집중"} onClick={onJoin}>{joined ? "참여 완료 ✓" : item.status === "모집중" ? "함께하기" : item.status}</button></div></article>;
+function JoinCard({ item, joined, onJoin, onDelete }: { item: JoinItem; joined: boolean; onJoin: () => void; onDelete: () => void }) {
+  const joinLabel = item.isOwner ? "내가 만든 Join" : joined ? "참여 완료 ✓" : item.status === "모집중" ? "함께하기" : item.status;
+  return <article className="join-card"><div className="join-visual green"><span>{item.icon}</span><i>{item.status}</i></div><div className="join-body"><div className="tags"><span>#{item.keyword}</span><span>#{item.date.slice(5)}</span></div><h3>{item.title}</h3><p className="join-description">{item.description}</p><p>🕒 {item.date} {item.time}</p><p>📍 {item.location}</p><p>👥 {item.people + (joined ? 1 : 0)}/{item.max}명 · by {item.host}</p><button className={joined ? "joined" : ""} disabled={item.isOwner || item.status !== "모집중"} onClick={onJoin}>{joinLabel}</button>{item.canDelete && <button className="join-delete" type="button" onClick={onDelete}>이 Join 삭제</button>}</div></article>;
 }
