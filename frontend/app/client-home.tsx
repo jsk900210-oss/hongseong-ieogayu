@@ -236,7 +236,7 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
         </nav>
         {user
           ? <button className="user-chip" onClick={() => move("profile")}><span>👤</span><b>{displayName}</b></button>
-          : <a className="topbar-login" href="/api/auth/google?return_to=/"><span>G</span> 로그인</a>}
+          : <a className="topbar-login" href="/api/auth/demo?return_to=/"><span>◎</span> 테스트 로그인</a>}
       </header>
 
       {tab === "home" && <>
@@ -291,7 +291,7 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
 
       {tab === "profile" && <section className="subpage shell profile-page">
         <div className="profile-head"><div className="avatar">👤</div><div><span className="eyebrow">ACCOUNT</span><h1>{displayName || "내 계정 만들기"}</h1><p>{user ? `${user.email} 계정으로 연결되었습니다.` : "로그인 후 서비스 내부 사용자 계정이 자동으로 생성됩니다."}</p><div className="stats"><span><b>0</b> Join</span><span><b>0</b> 신청</span><span><b>0</b> 참여 기록</span></div></div>{user && <div className="profile-actions"><button type="button" onClick={() => setShowOnboarding(true)}>기수 정보</button><button type="button" onClick={() => setEditingNickname(true)}>닉네임 변경</button></div>}</div>
-        <div className="keyword-panel" style={{marginTop: 24}}><div className="panel-title"><div><span className="mini-label">GOOGLE ACCOUNT</span><h2>{user ? "Google 계정 연결 완료" : "Google로 시작하기"}</h2></div><span className="test-badge">{user ? "로그인됨" : "로그인 필요"}</span></div><p>Google 비밀번호는 저장하지 않습니다. 인증 후 내부 사용자 ID를 만들고 Join 생성·신청·취소·참여 기록을 계정별로 관리합니다.</p>{user ? <a className="primary" href="/api/auth/logout">로그아웃</a> : <a className="primary google-login" href="/api/auth/google?return_to=/">G Google로 로그인</a>}</div>
+        <div className="keyword-panel" style={{marginTop: 24}}><div className="panel-title"><div><span className="mini-label">PARTICIPANT ACCOUNT</span><h2>{user ? "참가자 계정 연결 완료" : "참가자로 시작하기"}</h2></div><span className="test-badge">{user ? "로그인됨" : "로그인 필요"}</span></div><p>{user ? "기수 인증 후 Join 생성·신청·방문 기록을 참가자 계정별로 관리합니다." : "로컬 데모에서는 테스트 참가자로 바로 둘러볼 수 있어요. 실제 운영에서는 Google 계정으로 연결합니다."}</p>{user ? <a className="primary" href="/api/auth/logout">로그아웃</a> : <a className="primary google-login" href="/api/auth/demo?return_to=/">◎ 테스트 참가자로 로그인</a>}</div>
       </section>}
 
       <nav className="mobile-nav"><button className={tab === "home" ? "active" : ""} onClick={()=>move("home")}><span>🏠</span>홈</button><button className={tab === "place" ? "active" : ""} onClick={()=>move("place")}><span>🗺️</span>발견</button><button className="join-fab" onClick={()=>move("join")}><span>＋</span>Join</button><button className={tab === "ask" ? "active" : ""} onClick={()=>move("ask")}><span>💬</span>AI 질문</button><button className={tab === "profile" ? "active" : ""} onClick={()=>move("profile")}><span>👤</span>프로필</button></nav>
