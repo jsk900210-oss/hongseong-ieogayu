@@ -58,9 +58,13 @@ const MARKET_POINTS = [
   { name: "갈산전통시장", category: "3·8일 오일장", icon: "🏮", lat: 36.6028, lon: 126.5487 },
 ] as const;
 const FESTIVAL_POINTS = [
-  { name: "남당항 새조개·대하축제", category: "겨울·가을 먹거리 축제", icon: "🎉", lat: 36.537983719, lon: 126.4710062376 },
-  { name: "홍성역사인물·한우축제", category: "홍주읍성 일원", icon: "🎉", lat: 36.5997465556, lon: 126.661159671 },
-  { name: "광천김·토굴새우젓 축제", category: "광천전통시장 일원", icon: "🎉", lat: 36.5038, lon: 126.6257 },
+  { name: "홍성 남당항 새조개축제", category: "겨울 · 남당항 일원", icon: "🐚", lat: 36.537983719, lon: 126.4710062376 },
+  { name: "홍성역사인물축제", category: "봄 · 홍주읍성 일원", icon: "🏯", lat: 36.5997465556, lon: 126.661159671 },
+  { name: "내포문화축제", category: "가을 · 개최 위치 확인 중", icon: "🎭", lat: 36.601, lon: 126.661 },
+  { name: "홍성 남당항 대하축제", category: "가을 · 남당항 일원", icon: "🦐", lat: 36.5369, lon: 126.473 },
+  { name: "광천김·토굴새우젓 대축제", category: "가을 · 광천전통시장 일원", icon: "🫙", lat: 36.5006767661, lon: 126.6249711176 },
+  { name: "홍성한우 바비큐 페스티벌", category: "가을 · 홍주읍성 일원", icon: "🥩", lat: 36.601, lon: 126.663 },
+  { name: "구항면 국화축제", category: "가을 · 구항면 일원", icon: "🌼", lat: 36.586, lon: 126.611 },
 ] as const;
 const HIKE_POINTS = [
   { name: "용봉산", category: "381m · 초급~중급", icon: "🥾", lat: 36.643, lon: 126.65 },
