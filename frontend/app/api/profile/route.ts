@@ -11,6 +11,7 @@ export async function GET() {
   const profile = await getDb()
     .select({
       displayName: users.displayName,
+      memberType: users.memberType,
       cohortCode: users.cohortCode,
       stayPeriod: users.stayPeriod,
       interests: users.interests,
@@ -31,7 +32,7 @@ export async function PATCH(request: Request) {
   }
 
   const body = (await request.json().catch(() => null)) as
-    | { displayName?: unknown; cohortCode?: unknown; stayPeriod?: unknown; interests?: unknown; profileVisibility?: unknown; completeOnboarding?: unknown }
+    | { displayName?: unknown; memberType?: unknown; masterCode?: unknown; cohortCode?: unknown; stayPeriod?: unknown; interests?: unknown; profileVisibility?: unknown; completeOnboarding?: unknown }
     | null;
   const displayName =
     typeof body?.displayName === "string" ? body.displayName.trim() : "";
@@ -44,6 +45,8 @@ export async function PATCH(request: Request) {
   }
 
   const isOnboarding = body?.completeOnboarding === true;
+  const memberType = body?.memberType === "master" || body?.memberType === "friends" ? body.memberType : "general";
+  const masterCode = typeof body?.masterCode === "string" ? body.masterCode.trim() : "";
   const cohortCode = typeof body?.cohortCode === "string" ? body.cohortCode.trim().toUpperCase() : "";
   const stayPeriod = typeof body?.stayPeriod === "string" ? body.stayPeriod.trim() : "";
   const interests = Array.isArray(body?.interests)
@@ -51,22 +54,22 @@ export async function PATCH(request: Request) {
     : "";
   const profileVisibility = body?.profileVisibility === "public" ? "public" : "mates";
 
-  if (isOnboarding && (!/^HS-\d{2}-\d{2}$/.test(cohortCode) || !stayPeriod || !interests)) {
-    return NextResponse.json({ error: "기수 코드, 체류 기간, 관심사를 모두 입력해 주세요." }, { status: 400 });
+  if (isOnboarding && (!stayPeriod || !interests)) {
+    return NextResponse.json({ error: "체류 계획과 관심사를 모두 입력해 주세요." }, { status: 400 });
   }
-  const allowedCohorts = (process.env.COHORT_CODES ?? (process.env.NODE_ENV === "development" ? "HS-01-01" : ""))
+  const allowedMasterCodes = (process.env.MASTER_ACCESS_CODES ?? (process.env.NODE_ENV === "development" ? "MASTER-LOCAL" : ""))
     .split(",")
     .map((code) => code.trim().toUpperCase())
     .filter(Boolean);
-  if (isOnboarding && allowedCohorts.length === 0) {
-    return NextResponse.json({ error: "아직 참가자 기수 코드가 설정되지 않았어요. 운영자에게 문의해 주세요." }, { status: 503 });
+  if (isOnboarding && memberType === "master" && allowedMasterCodes.length === 0) {
+    return NextResponse.json({ error: "Master 인증 코드가 설정되지 않았어요." }, { status: 503 });
   }
-  if (isOnboarding && !allowedCohorts.includes(cohortCode)) {
-    return NextResponse.json({ error: "유효하지 않은 기수 코드예요. 안내받은 코드를 다시 확인해 주세요." }, { status: 403 });
+  if (isOnboarding && memberType === "master" && !allowedMasterCodes.includes(masterCode.toUpperCase())) {
+    return NextResponse.json({ error: "Master 인증 코드가 올바르지 않아요." }, { status: 403 });
   }
 
   const update = isOnboarding
-    ? { displayName: displayName || user.displayName, cohortCode, stayPeriod, interests, profileVisibility, onboardingCompletedAt: new Date(), updatedAt: new Date() }
+    ? { displayName: displayName || user.displayName, memberType, cohortCode, stayPeriod, interests, profileVisibility, onboardingCompletedAt: new Date(), updatedAt: new Date() }
     : { displayName, updatedAt: new Date() };
 
   await getDb()
