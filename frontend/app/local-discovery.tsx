@@ -54,9 +54,8 @@ const HIKES = [
 ] as const;
 const MARKET_POINTS = [
   { name: "홍성전통시장", category: "1·6일 오일장", icon: "🏮", lat: 36.6021991708, lon: 126.6680367636 },
-  { name: "광천전통시장", category: "4·9일 오일장", icon: "🏮", lat: 36.5038, lon: 126.6257 },
+  { name: "광천전통시장", category: "4·9일 오일장", icon: "🏮", lat: 36.5006767661, lon: 126.6249711176 },
   { name: "갈산전통시장", category: "3·8일 오일장", icon: "🏮", lat: 36.6028, lon: 126.5487 },
-  { name: "결성전통시장", category: "5·10일 오일장", icon: "🏮", lat: 36.5268, lon: 126.5468 },
 ] as const;
 const FESTIVAL_POINTS = [
   { name: "남당항 새조개·대하축제", category: "겨울·가을 먹거리 축제", icon: "🎉", lat: 36.537983719, lon: 126.4710062376 },
@@ -160,18 +159,7 @@ function HongseongMap({ userLocation, items = PLACES, onSelect }: { userLocation
 
       SPECIAL_ZONES.forEach((zone) => {
         L.circle([zone.lat, zone.lon], { radius: zone.radius, color: zone.hex, weight: 2, dashArray: "7 6", fillColor: zone.hex, fillOpacity: .18 })
-          .bindTooltip(zone.shortName, { permanent: true, direction: "center", className: `leaflet-zone-label ${zone.color}` })
           .addTo(map!);
-      });
-
-      AREA_GUIDES.forEach((area) => {
-        const guideIcon = L.divIcon({
-          className: "leaflet-area-guide-shell",
-          html: `<span class="leaflet-area-guide" style="--area-color:${area.color}"><b>${area.name}</b><small>${area.detail}</small></span>`,
-          iconSize: [112, 42],
-          iconAnchor: [56, 21],
-        });
-        L.marker([area.lat, area.lon], { icon: guideIcon, interactive: false, zIndexOffset: -200 }).addTo(map!);
       });
 
       items.forEach((place) => {
