@@ -77,6 +77,15 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
   }, []);
 
   useEffect(() => {
+    const authError = new URLSearchParams(window.location.search).get("auth_error");
+    if (!authError) return;
+    window.history.replaceState({}, "", window.location.pathname);
+    setToast(authError === "google_config" ? "Google 연결을 준비 중이에요. 테스트 로그인으로 먼저 확인해 보세요." : "로그인 연결을 다시 확인해 주세요.");
+    const timer = window.setTimeout(() => setToast(""), 3500);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
     if (!user) return;
     fetch("/api/profile")
       .then((response) => response.ok ? response.json() : null)
