@@ -54,6 +54,16 @@ export async function PATCH(request: Request) {
   if (isOnboarding && (!/^HS-\d{2}-\d{2}$/.test(cohortCode) || !stayPeriod || !interests)) {
     return NextResponse.json({ error: "기수 코드, 체류 기간, 관심사를 모두 입력해 주세요." }, { status: 400 });
   }
+  const allowedCohorts = (process.env.COHORT_CODES ?? "")
+    .split(",")
+    .map((code) => code.trim().toUpperCase())
+    .filter(Boolean);
+  if (isOnboarding && allowedCohorts.length === 0) {
+    return NextResponse.json({ error: "아직 참가자 기수 코드가 설정되지 않았어요. 운영자에게 문의해 주세요." }, { status: 503 });
+  }
+  if (isOnboarding && !allowedCohorts.includes(cohortCode)) {
+    return NextResponse.json({ error: "유효하지 않은 기수 코드예요. 안내받은 코드를 다시 확인해 주세요." }, { status: 403 });
+  }
 
   const update = isOnboarding
     ? { displayName: displayName || user.displayName, cohortCode, stayPeriod, interests, profileVisibility, onboardingCompletedAt: new Date(), updatedAt: new Date() }
