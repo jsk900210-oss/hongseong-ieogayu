@@ -164,3 +164,14 @@ export const festivalVerificationRuns = sqliteTable("festival_verification_runs"
   checkedAt: integer("checked_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
 });
 
+export const communityRecipes = sqliteTable("community_recipes", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  ingredient: text("ingredient").notNull(),
+  summary: text("summary").notNull(),
+  sourceName: text("source_name").notNull().default("직접 작성"),
+  sourceUrl: text("source_url").notNull().default(""),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+});
+

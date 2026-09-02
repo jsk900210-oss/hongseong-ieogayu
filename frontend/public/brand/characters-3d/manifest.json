@@ -1,0 +1,52 @@
+{
+  "collection": "이음이 프렌즈",
+  "version": "1.0",
+  "usage": {
+    "goods": "오방색 매듭끈과 아크릴 참을 결합한 굿즈형 캐릭터",
+    "video": "끈·고리·아크릴판 없이 쓰는 독립 3D 캐릭터"
+  },
+  "characters": [
+    {
+      "id": "ali",
+      "name": "알이",
+      "motif": "마늘",
+      "role": "함께 먹고 장보는 일상의 시작",
+      "asset": "/brand/characters-3d/ali-3d.png"
+    },
+    {
+      "id": "saemi",
+      "name": "새미",
+      "motif": "새조개",
+      "role": "남당항과 바다의 소식을 전하는 친구",
+      "asset": "/brand/characters-3d/saemi-3d.png"
+    },
+    {
+      "id": "gimi",
+      "name": "김이",
+      "motif": "광천김",
+      "role": "조용히 동네의 이야기를 기록하는 친구",
+      "asset": "/brand/characters-3d/gimi-3d.png"
+    },
+    {
+      "id": "haru",
+      "name": "하루",
+      "motif": "남당항 대하",
+      "role": "바다와 축제를 발견하는 활기찬 친구",
+      "asset": "/brand/characters-3d/haru-3d.png"
+    },
+    {
+      "id": "duri",
+      "name": "두리",
+      "motif": "두부와 콩",
+      "role": "텃밭과 느린 생활을 함께하는 친구",
+      "asset": "/brand/characters-3d/duri-3d.png"
+    },
+    {
+      "id": "hangyeol",
+      "name": "한결이",
+      "motif": "홍성 한우",
+      "role": "다섯 친구를 연결하는 중심 친구",
+      "asset": "/brand/characters-3d/hangyeol-3d.png"
+    }
+  ]
+}

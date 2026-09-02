@@ -74,7 +74,7 @@ export default function HongseongWeather() {
   const celestialLeft = `${92 - cycle.progress * 84}%`;
   const celestialTop = `${70 - Math.sin(cycle.progress * Math.PI) * 57}%`;
   return <>
-    <div className={`weather-atmosphere season-${season} weather-${effect} time-${cycle.phase}`} aria-hidden="true"><span className="weather-celestial" style={{ left: celestialLeft, top: cycle.phase === "night" ? "17%" : celestialTop }} />{Array.from({ length: 16 }, (_, index) => <i key={index} style={{ "--weather-index": index } as React.CSSProperties} />)}</div>
+    <div className={`weather-atmosphere season-${season} weather-${effect} time-${cycle.phase}`} aria-hidden="true"><span className="weather-celestial" style={{ left: celestialLeft, top: cycle.phase === "night" ? "17%" : celestialTop }} />{effect === "cloudy" && <span className="weather-cloud-bank"><b /><b /><b /></span>}{Array.from({ length: 16 }, (_, index) => <i key={index} style={{ "--weather-index": index } as React.CSSProperties} />)}</div>
     <div className="hero-weather-wrap">
     <button className="hero-weather" type="button" onClick={() => setOpen((value) => !value)} aria-expanded={open}>
       <span className="weather-place">{area.name}<i>지역 변경 ›</i></span>

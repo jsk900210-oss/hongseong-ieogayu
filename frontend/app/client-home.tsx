@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { GoogleUser } from "./google-auth";
 import LocalDiscovery from "./local-discovery";
 import HongseongWeather from "./hongseong-weather";
-type Tab = "home" | "place" | "join" | "messages" | "profile";
+type Tab = "home" | "place" | "recipe" | "join" | "messages" | "profile";
 type JoinStatus = "모집중" | "모집완료" | "일정완료";
 
 type JoinItem = {
@@ -38,8 +38,17 @@ type AskResponse = {
 
 type ProfileMeta = { interests: string[]; activityScore: number; lastActiveAt: string | null; memberType: "master" | "friends" | "general" | "" };
 type JoinMessage = { id: number; body: string; createdAt: string; userId: string; displayName: string };
+type IeumiFriend = { id: string; name: string; image: string; eyebrow: string; lines: string[]; story: string };
 
 const ONBOARDING_INTERESTS = ["맛집 탐방", "로컬 창업", "농사·텃밭", "산책·등산", "사진·기록", "함께 요리", "반려동물", "문화·축제"];
+const IEUMI_FRIENDS: IeumiFriend[] = [
+  { id: "ali", name: "알이", image: "/brand/characters-3d/ali-3d.png", eyebrow: "HONGSEONG GARLIC", lines: ["홍성 마늘 듬뿍, 한 접시 어때?", "의성마늘도 멋지지만 홍성도 지지 않아!", "오늘 밥상은 마늘 향으로 꽉 채우자!", "싱싱한 홍성 마늘부터 챙겨!"], story: "알이는 밥상과 장보기를 제일 먼저 챙기는 든든한 친구예요. 홍성의 맛있는 하루를 발견하면 제일 먼저 달려가요." },
+  { id: "saemi", name: "새미", image: "/brand/characters-3d/saemi-3d.png", eyebrow: "NAMDANG SAEJOGAE", lines: ["새조개에 미나리, 초장 콕!", "남당항의 봄은 새조개부터야.", "오늘 바다 소식, 내가 알려줄게!", "새조개 한 입이면 봄이 성큼!"], story: "남당항 바다 소식을 조용히 모으는 새조개 친구예요. 제철의 설렘과 해안의 풍경을 들려줘요." },
+  { id: "gimi", name: "김이", image: "/brand/characters-3d/gimi-3d.png", eyebrow: "GWANGCHEON GIM", lines: ["광천김에 따끈한 밥이면 끝!", "바삭한 김 한 장, 행복 한 숟갈!", "광천김은 밥상의 든든한 친구지.", "오늘 김밥 싸서 소풍 갈래?"], story: "광천김처럼 담백하지만 알찬 기록가예요. 동네의 작은 가게와 좋은 소식을 꼼꼼히 이어줘요." },
+  { id: "haru", name: "하루", image: "/brand/characters-3d/haru-3d.png", eyebrow: "NAMDANG PORT PRAWN", lines: ["대하는 소금구이가 제맛이야!", "남당항 축제, 같이 놀러 갈래?", "바다 바람 맞으며 산책하자!", "오늘 기분도 통통하게 올려볼까?"], story: "남당항의 활기처럼 호기심이 많은 친구예요. 바다, 축제, 오늘 재미있는 일을 발견하면 모두에게 알려줘요." },
+  { id: "duri", name: "두리", image: "/brand/characters-3d/duri-3d.png", eyebrow: "TOFU & BEANS", lines: ["두부는 노릇하게 부쳐야 고소해!", "따끈한 두부 한 모, 마음도 몽글몽글.", "오늘은 두부로 가볍고 든든하게!", "좋은 재료는 같이 나눠 먹자."], story: "천천히 만드는 일상의 기쁨을 좋아해요. 시장과 밥상, 이웃의 다정한 시간을 함께 이어가요." },
+  { id: "hangyeol", name: "한결이", image: "/brand/characters-3d/hangyeol-3d.png", eyebrow: "HONGSEONG HANWOO", lines: ["한우는 천천히 구워야 제맛이지!", "홍성 한우로 든든하게 이어가유!", "맛있는 한 끼가 친구를 더 가깝게 해.", "따뜻한 밥상부터 함께 준비하자!"], story: "홍성 한우를 닮은 든든한 중심 친구예요. 다섯 친구와 사람, 장소를 한결같이 연결해요." },
+];
 
 export default function ClientHome({ user }: { user: GoogleUser | null }) {
   const [tab, setTab] = useState<Tab>("home");
@@ -73,6 +82,7 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
   const [messageDraft, setMessageDraft] = useState("");
   const [sendingMessage, setSendingMessage] = useState(false);
   const [toast, setToast] = useState("");
+  const [selectedFriend, setSelectedFriend] = useState<(IeumiFriend & { line: string }) | null>(null);
   const [askQuestion, setAskQuestion] = useState("");
   const [askLoading, setAskLoading] = useState(false);
   const [askResponse, setAskResponse] = useState<AskResponse | null>(null);
@@ -313,7 +323,7 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
         </button>
         <nav className="desktop-nav">
           <button className={tab === "home" ? "active" : ""} onClick={() => move("home")}>홈</button>
-          <button className={tab === "place" ? "active" : ""} onClick={() => move("place")}>근처 발견</button>
+          <button className={tab === "place" ? "active" : ""} onClick={() => move("place")}>근처 발견</button><button className={tab === "recipe" ? "active" : ""} onClick={() => move("recipe")}>레시피</button>
           <button className={tab === "join" ? "active" : ""} onClick={() => move("join")}>Join</button>
           <button className={tab === "messages" ? "active" : ""} onClick={() => move("messages")}>메시지함</button>
           <button className={tab === "profile" ? "active" : ""} onClick={() => move("profile")}>내 프로필</button>
@@ -334,13 +344,17 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
           <div className="hero-art hongseong-hero" role="img" aria-label="황금 들녘과 홍성 구옥 스테이 풍경"><HongseongWeather /></div>
         </section>
         <section className="friends-intro shell" aria-labelledby="friends-title">
-          <div className="friends-copy"><span className="mini-label">IEUMI FRIENDS</span><h2 id="friends-title">홍성의 하루를<br/>함께 이어가는 친구들</h2><p>한결이와 이음이 프렌즈가 장날, 바다, 식탁에서 만난 사람과 장소의 이야기를 기록해요.</p><button className="text-btn" onClick={() => move("place")}>친구들과 홍성 둘러보기</button></div>
-          <div className="friends-art" aria-label="한결이와 이음이 프렌즈 캐릭터"><img className="friends-cast" src="/brand/ieumi-friends.png" alt="알이, 새미, 김이, 하루, 두리" /><img className="friends-hangyeol" src="/brand/hangyeol.png" alt="한결이" /></div>
+          <div className="friends-copy"><span className="mini-label">IEUMI FRIENDS · RECIPE</span><h2 id="friends-title">홍성 친구들의<br/>다양한 레시피 공유</h2><p>홍성의 바다와 밭, 시장에서 만난 재료로 친구들이 쉬운 한 끼 레시피를 나눠요.</p></div>
+          <div className="friends-art" aria-label="한결이와 이음이 프렌즈 캐릭터">
+            <button className="recipe-cta" type="button" onClick={() => move("recipe")}>홍성 재료 만나러 가기</button>
+            {IEUMI_FRIENDS.map((friend) => <button key={friend.id} type="button" className={`friend-3d friend-${friend.id}${selectedFriend?.id === friend.id ? " selected" : ""}`} onClick={() => setSelectedFriend({ ...friend, line: friend.lines[Math.floor(Math.random() * friend.lines.length)] })} aria-label={`${friend.name} 소개 보기`}><img src={friend.image} alt="" />{selectedFriend?.id === friend.id && <span className="friend-speech" role="status"><b>{friend.name}</b><span>{selectedFriend.line}</span></span>}</button>)}
+          </div>
         </section>
         <section className="join-preview"><div className="shell"><div className="section-heading light"><div><span className="mini-label">JOIN · READY</span><h2>{joins.length > 0 ? "지금 참여할 수 있는 Join" : "첫 Join을 기다리고 있어요"}</h2><p>{joins.length > 0 ? `가장 가까운 일정부터 ${Math.min(joins.length, 3)}개를 확인해 보세요.` : "계정으로 로그인한 뒤 새로운 Join을 만들어보세요."}</p></div><button onClick={() => move("join")}>{joins.length > 0 ? "전체 Join 보기 →" : "Join 만들기 →"}</button></div>{joins.length > 0 && <div className="join-grid">{scheduledJoins.slice(0, 3).map((item) => <JoinCard key={item.id} item={item} joined={joined.includes(item.id)} onJoin={() => toggleJoin(item)} onDelete={() => deleteJoin(item.id)} onChat={() => openChat(item)} />)}</div>}</div></section>
       </>}
 
       {tab === "place" && <LocalDiscovery displayName={displayName} signedIn={Boolean(user)} onRequireLogin={() => window.location.assign("/api/auth/google?return_to=/")} />}
+      {tab === "recipe" && <RecipeRoom signedIn={Boolean(user)} />}
 
       {tab === "join" && <section className="subpage shell">
         <div className="join-title-row"><div><span className="eyebrow">JOIN</span><h1>{joins.length}개의 홍성 Join</h1></div><button className="primary" onClick={() => user ? setCreatingJoin(true) : window.location.assign("/api/auth/google?return_to=/")}>Join 만들기 <span>＋</span></button></div>
@@ -370,4 +384,17 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
 function JoinCard({ item, joined, onJoin, onDelete, onChat }: { item: JoinItem; joined: boolean; onJoin: () => void; onDelete: () => void; onChat: () => void }) {
   const joinLabel = item.isOwner ? "내가 만든 Join" : joined ? "참여 완료 ✓" : item.status === "모집중" ? "함께하기" : item.status;
   return <article className="join-card"><div className="join-visual green"><span>{item.icon}</span><i>{item.status}</i></div><div className="join-body"><div className="tags"><span>#{item.keyword}</span><span>#{item.date.slice(5)}</span></div><h3>{item.title}</h3><p className="join-description">{item.description}</p><p>🕒 {item.date} {item.time}</p><p>📍 {item.location}</p><p>👥 {item.people + (joined ? 1 : 0)}/{item.max}명 · by {item.host}</p><button className={joined ? "joined" : ""} disabled={item.isOwner || item.status !== "모집중"} onClick={onJoin}>{joinLabel}</button>{(item.isOwner || joined) && <button className="join-chat-button" type="button" onClick={onChat}>참여자 채팅 열기</button>}{item.canDelete && <button className="join-delete" type="button" onClick={onDelete}>이 Join 삭제</button>}</div></article>;
+}
+
+function RecipeRoom({ signedIn }: { signedIn: boolean }) {
+  const [recipes, setRecipes] = useState<Array<{ id: string; title: string; ingredient: string; summary: string; sourceName: string; sourceUrl: string; isCommunity?: boolean; author?: string }>>([]);
+  const [recipeCategory, setRecipeCategory] = useState("전체");
+  const [selectedRecipe, setSelectedRecipe] = useState<{ id: string; title: string; ingredient: string; summary: string; sourceName: string; sourceUrl: string; isCommunity?: boolean; author?: string } | null>(null);
+  const [draft, setDraft] = useState({ title: "", ingredient: "", summary: "", sourceName: "직접 작성", sourceUrl: "" });
+  const [notice, setNotice] = useState("");
+  useEffect(() => { fetch("/api/recipes").then((response) => response.json()).then((result) => setRecipes(result.recipes ?? [])).catch(() => setNotice("레시피를 불러오지 못했어요.")); }, []);
+  const submit = async (event: React.FormEvent) => { event.preventDefault(); const response = await fetch("/api/recipes", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(draft) }); const result = await response.json(); if (!response.ok) { setNotice(result.error ?? "등록하지 못했어요."); return; } setNotice("레시피를 공유했어요."); setDraft({ title: "", ingredient: "", summary: "", sourceName: "직접 작성", sourceUrl: "" }); const refreshed = await fetch("/api/recipes").then((value) => value.json()); setRecipes(refreshed.recipes ?? []); };
+  const categories = ["전체", "마늘", "새조개", "김", "대하", "두부", "한우"];
+  const shownRecipes = recipeCategory === "전체" ? recipes : recipes.filter((recipe) => recipe.ingredient.includes(recipeCategory));
+  return <section className="subpage shell recipe-room"><span className="eyebrow">HONGSEONG RECIPE ROOM</span><h1>홍성 재료 레시피 공유방</h1><p className="lead">여섯 친구 재료별 레시피와 이웃이 직접 올린 레시피를 함께 봐요.</p><div className="recipe-categories">{categories.map((category) => <button type="button" key={category} className={recipeCategory === category ? "active" : ""} onClick={() => setRecipeCategory(category)}>{category === "전체" ? "전체 레시피" : `# ${category}`}</button>)}</div>{signedIn ? <form className="recipe-form" onSubmit={submit}><input required value={draft.title} onChange={(e) => setDraft({...draft, title:e.target.value})} placeholder="레시피 제목" /><input required value={draft.ingredient} onChange={(e) => setDraft({...draft, ingredient:e.target.value})} placeholder="주재료" /><textarea required value={draft.summary} onChange={(e) => setDraft({...draft, summary:e.target.value})} placeholder="조리 방법과 팁을 적어 주세요" /><button className="primary">내 레시피 공유하기</button></form> : <p className="recipe-login">로그인하면 나만의 레시피를 공유할 수 있어요.</p>}{notice && <p className="recipe-notice">{notice}</p>}<div className="recipe-grid">{shownRecipes.map((recipe) => <button type="button" className="recipe-card" key={recipe.id} onClick={() => setSelectedRecipe(recipe)}><span>{recipe.isCommunity ? "이웃 레시피" : recipe.ingredient}</span><h2>{recipe.title}</h2><p>{recipe.summary}</p><small>레시피 자세히 보기 →</small></button>)}</div>{selectedRecipe && <div className="modal-backdrop" onMouseDown={() => setSelectedRecipe(null)}><section className="recipe-detail" role="dialog" aria-modal="true" aria-label={selectedRecipe.title} onMouseDown={(event) => event.stopPropagation()}><button className="modal-close" onClick={() => setSelectedRecipe(null)}>×</button><span className="mini-label">{selectedRecipe.isCommunity ? "COMMUNITY RECIPE" : selectedRecipe.ingredient}</span><h2>{selectedRecipe.title}</h2><p>{selectedRecipe.summary}</p><div><b>주재료</b><span>{selectedRecipe.ingredient}</span></div><div><b>출처</b><span>{selectedRecipe.isCommunity ? `${selectedRecipe.author ?? "이웃"} 직접 공유` : selectedRecipe.sourceName}</span></div>{selectedRecipe.sourceUrl && <a href={selectedRecipe.sourceUrl} target="_blank" rel="noreferrer">원문 출처 열기 ↗</a>}</section></div>}</section>;
 }
