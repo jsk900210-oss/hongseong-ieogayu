@@ -2,13 +2,13 @@ import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDb } from "../../../../../db";
 import { joinParticipants, joins } from "../../../../../db/schema";
-import { getChatGPTUser } from "../../../../chatgpt-auth";
+import { getGoogleUser } from "../../../../google-auth";
 
 export async function POST(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const user = await getChatGPTUser();
+  const user = await getGoogleUser();
   if (!user) {
     return NextResponse.json({ error: "로그인 후 참여할 수 있어요." }, { status: 401 });
   }

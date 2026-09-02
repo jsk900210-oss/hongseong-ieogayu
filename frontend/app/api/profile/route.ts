@@ -2,10 +2,10 @@ import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDb } from "../../../db";
 import { users } from "../../../db/schema";
-import { getChatGPTUser } from "../../chatgpt-auth";
+import { getGoogleUser } from "../../google-auth";
 
 export async function PATCH(request: Request) {
-  const user = await getChatGPTUser();
+  const user = await getGoogleUser();
   if (!user) {
     return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
   }

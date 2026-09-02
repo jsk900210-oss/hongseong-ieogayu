@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { integer, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 export const users = sqliteTable(
   "users",
@@ -60,4 +60,59 @@ export const joinParticipants = sqliteTable(
     ),
   ],
 );
+
+export const places = sqliteTable(
+  "places",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    category: text("category").notNull(),
+    emoji: text("emoji").notNull(),
+    address: text("address").notNull().default(""),
+    phone: text("phone").notNull().default(""),
+    latitude: real("latitude").notNull(),
+    longitude: real("longitude").notNull(),
+    source: text("source").notNull().default("operator"),
+    sourceId: text("source_id").notNull().default(""),
+    publicStatus: text("public_status").notNull().default("unknown"),
+    verificationStatus: text("verification_status").notNull().default("needs_check"),
+    lastSourceCheckedAt: integer("last_source_checked_at", { mode: "timestamp" }),
+    lastCommunityCheckedAt: integer("last_community_checked_at", { mode: "timestamp" }),
+    createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+    updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+  },
+  (table) => [
+    uniqueIndex("idx_places_source_id").on(table.source, table.sourceId),
+  ],
+);
+
+export const placeReviews = sqliteTable("place_reviews", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  placeId: text("place_id").notNull().references(() => places.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  rating: integer("rating").notNull(),
+  body: text("body").notNull(),
+  visitedAt: integer("visited_at", { mode: "timestamp" }).notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+});
+
+export const placeReports = sqliteTable("place_reports", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  placeId: text("place_id").notNull().references(() => places.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  reportType: text("report_type").notNull(),
+  note: text("note").notNull().default(""),
+  status: text("status").notNull().default("pending"),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+  resolvedAt: integer("resolved_at", { mode: "timestamp" }),
+});
+
+export const placeVerificationRuns = sqliteTable("place_verification_runs", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  placeId: text("place_id").notNull().references(() => places.id, { onDelete: "cascade" }),
+  source: text("source").notNull(),
+  result: text("result").notNull(),
+  evidence: text("evidence").notNull().default(""),
+  checkedAt: integer("checked_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+});
 

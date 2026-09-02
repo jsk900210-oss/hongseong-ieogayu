@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { getChatGPTUser } from "./chatgpt-auth";
+import { getGoogleUser } from "./google-auth";
 import ClientHome from "./client-home";
 import { getDb } from "../db";
 import { users } from "../db/schema";
@@ -7,7 +7,7 @@ import { users } from "../db/schema";
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const user = await getChatGPTUser();
+  const user = await getGoogleUser();
   let displayName = user?.displayName ?? null;
 
   if (user) {

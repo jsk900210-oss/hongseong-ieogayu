@@ -2,7 +2,7 @@ import { and, desc, eq, lte } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDb } from "../../../db";
 import { joinParticipants, joins, users } from "../../../db/schema";
-import { getChatGPTUser } from "../../chatgpt-auth";
+import { getGoogleUser } from "../../google-auth";
 
 const iconByKeyword: Record<string, string> = {
   여행: "🗺️",
@@ -15,7 +15,7 @@ const iconByKeyword: Record<string, string> = {
 export async function GET() {
   const db = getDb();
   const now = new Date();
-  const viewer = await getChatGPTUser();
+  const viewer = await getGoogleUser();
 
   await db
     .update(joins)
@@ -66,7 +66,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const user = await getChatGPTUser();
+  const user = await getGoogleUser();
   if (!user) {
     return NextResponse.json({ error: "로그인 후 Join을 만들 수 있어요." }, { status: 401 });
   }

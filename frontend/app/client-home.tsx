@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { ChatGPTUser } from "./chatgpt-auth";
+import type { GoogleUser } from "./google-auth";
 import LocalDiscovery from "./local-discovery";
+import HongseongWeather from "./hongseong-weather";
 type Tab = "home" | "place" | "join" | "ask" | "profile";
 type JoinStatus = "모집중" | "모집완료" | "일정완료";
 
@@ -33,7 +34,7 @@ type AskResponse = {
   }>;
 };
 
-export default function ClientHome({ user }: { user: ChatGPTUser | null }) {
+export default function ClientHome({ user }: { user: GoogleUser | null }) {
   const [tab, setTab] = useState<Tab>("home");
   const [displayName, setDisplayName] = useState(user?.displayName ?? "");
   const [nicknameDraft, setNicknameDraft] = useState(user?.displayName ?? "");
@@ -106,7 +107,7 @@ export default function ClientHome({ user }: { user: ChatGPTUser | null }) {
   const saveJoin = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!user) {
-      window.location.href = "/signin-with-chatgpt?return_to=/";
+      window.location.href = "/api/auth/google?return_to=/";
       return;
     }
 
@@ -176,14 +177,14 @@ export default function ClientHome({ user }: { user: ChatGPTUser | null }) {
     <main>
       <header className="topbar">
         <button className="brand" onClick={() => move("home")}>
-          <span className="brand-mark">이</span><span><b>홍성메이트</b><small>HONGSEONG STAY</small></span>
+          <span className="brand-mark">이</span><span><b>홍성, 이어가유</b><small>LOCAL STAY COMMUNITY</small></span>
         </button>
         <nav className="desktop-nav">
           <button className={tab === "home" ? "active" : ""} onClick={() => move("home")}>홈</button>
           <button className={tab === "place" ? "active" : ""} onClick={() => move("place")}>근처 발견</button>
           <button className={tab === "join" ? "active" : ""} onClick={() => move("join")}>Join</button>
           <button className={tab === "ask" ? "active" : ""} onClick={() => move("ask")}>AI 질문</button>
-          <button className={tab === "profile" ? "active" : ""} onClick={() => move("profile")}>나의 홍성</button>
+          <button className={tab === "profile" ? "active" : ""} onClick={() => move("profile")}>내 프로필</button>
         </nav>
         <button className="user-chip" onClick={() => move("profile")}><span>👤</span><b>{displayName || "로그인"}</b></button>
       </header>
@@ -193,18 +194,18 @@ export default function ClientHome({ user }: { user: ChatGPTUser | null }) {
           <div className="hero-copy">
             <span className="eyebrow">홍성, 이어가유 · 구옥 스테이</span>
             <h1>홍성에서<br/><em>함께할 순간</em>을 담아요</h1>
-            <p>혼자 온 여행자도 금세 친구가 되는 곳.<br/>구옥 스테이 반경 2km의 장소와 참가자 Join을 만나보세요.</p>
+            <p>혼자 온 여행자도 금세 친구가 되는 곳.<br/>홍성에 있는 로컬 친구들을 자유롭게 만나보세요.</p>
             <div className="hero-actions"><button className="primary" onClick={() => move("join")}>Join 시작하기 →</button><button className="text-btn" onClick={() => move("place")}>근처 둘러보기</button></div>
           </div>
-          <div className="hero-art hongseong-hero" role="img" aria-label="황금 들녘과 홍성 구옥 스테이 풍경"><div className="art-sticker">오늘의 홍성<br/><strong>머물기 좋음</strong></div><span className="hero-photo-label">구옥과 들녘, 이어지는 하루</span></div>
+          <div className="hero-art hongseong-hero" role="img" aria-label="황금 들녘과 홍성 구옥 스테이 풍경"><HongseongWeather /></div>
         </section>
         <section className="join-preview"><div className="shell"><div className="section-heading light"><div><span className="mini-label">JOIN · READY</span><h2>{joins.length > 0 ? "지금 참여할 수 있는 Join" : "첫 Join을 기다리고 있어요"}</h2><p>{joins.length > 0 ? `최근 등록된 ${Math.min(joins.length, 3)}개의 모임을 확인해 보세요.` : "계정으로 로그인한 뒤 새로운 Join을 만들어보세요."}</p></div><button onClick={() => move("join")}>{joins.length > 0 ? "전체 Join 보기 →" : "Join 만들기 →"}</button></div>{joins.length > 0 && <div className="join-grid">{joins.slice(0, 3).map((item) => <JoinCard key={item.id} item={item} joined={joined.includes(item.id)} onJoin={() => toggleJoin(item.id, item.status)} />)}</div>}</div></section>
       </>}
 
-      {tab === "place" && <LocalDiscovery displayName={displayName} signedIn={Boolean(user)} onRequireLogin={() => window.location.assign("/signin-with-chatgpt?return_to=/")} />}
+      {tab === "place" && <LocalDiscovery displayName={displayName} signedIn={Boolean(user)} onRequireLogin={() => window.location.assign("/api/auth/google?return_to=/")} />}
 
       {tab === "join" && <section className="subpage shell">
-        <div className="join-title-row"><div><span className="eyebrow">JOIN</span><h1>{joins.length}개의 홍성 Join</h1></div><button className="primary" onClick={() => user ? setCreatingJoin(true) : window.location.assign("/signin-with-chatgpt?return_to=/")}>Join 만들기 <span>＋</span></button></div>
+        <div className="join-title-row"><div><span className="eyebrow">JOIN</span><h1>{joins.length}개의 홍성 Join</h1></div><button className="primary" onClick={() => user ? setCreatingJoin(true) : window.location.assign("/api/auth/google?return_to=/")}>Join 만들기 <span>＋</span></button></div>
         <div className="join-filters">{keywords.map((item) => <button key={item} className={keyword === item ? "selected" : ""} onClick={() => setKeyword(item)}>{item}</button>)}</div>
         {visible.length === 0 ? <div className="keyword-panel"><span className="mini-label">EMPTY JOIN</span><h2>등록된 Join이 아직 없어요</h2><p>로그인한 사용자가 첫 Join을 만들면 이곳에 표시됩니다.</p></div> : <div className="join-page-grid">{visible.map((item) => <JoinCard key={item.id} item={item} joined={joined.includes(item.id)} onJoin={() => toggleJoin(item.id, item.status)}/>)}</div>}
       </section>}
@@ -240,14 +241,14 @@ export default function ClientHome({ user }: { user: ChatGPTUser | null }) {
 
       {tab === "profile" && <section className="subpage shell profile-page">
         <div className="profile-head"><div className="avatar">👤</div><div><span className="eyebrow">ACCOUNT</span><h1>{displayName || "내 계정 만들기"}</h1><p>{user ? `${user.email} 계정으로 연결되었습니다.` : "로그인 후 서비스 내부 사용자 계정이 자동으로 생성됩니다."}</p><div className="stats"><span><b>0</b> Join</span><span><b>0</b> 신청</span><span><b>0</b> 참여 기록</span></div></div>{user && <button type="button" onClick={() => setEditingNickname(true)}>닉네임 변경</button>}</div>
-        <div className="keyword-panel" style={{marginTop: 24}}><div className="panel-title"><div><span className="mini-label">ACCOUNT</span><h2>{user ? "계정 연결 완료" : "계정으로 시작하기"}</h2></div><span className="test-badge">{user ? "로그인됨" : "로그인 필요"}</span></div><p>서비스는 비밀번호를 저장하지 않습니다. 인증 후 내부 사용자 ID를 만들고 Join 생성·신청·취소·참여 기록을 계정별로 관리합니다.</p>{user ? <a className="primary" href="/signout-with-chatgpt?return_to=/">로그아웃</a> : <a className="primary" href="/signin-with-chatgpt?return_to=/">로그인하고 계정 만들기</a>}</div>
+        <div className="keyword-panel" style={{marginTop: 24}}><div className="panel-title"><div><span className="mini-label">GOOGLE ACCOUNT</span><h2>{user ? "Google 계정 연결 완료" : "Google로 시작하기"}</h2></div><span className="test-badge">{user ? "로그인됨" : "로그인 필요"}</span></div><p>Google 비밀번호는 저장하지 않습니다. 인증 후 내부 사용자 ID를 만들고 Join 생성·신청·취소·참여 기록을 계정별로 관리합니다.</p>{user ? <a className="primary" href="/api/auth/logout">로그아웃</a> : <a className="primary google-login" href="/api/auth/google?return_to=/">G Google로 로그인</a>}</div>
       </section>}
 
-      <nav className="mobile-nav"><button className={tab === "home" ? "active" : ""} onClick={()=>move("home")}><span>🏠</span>홈</button><button className={tab === "place" ? "active" : ""} onClick={()=>move("place")}><span>🗺️</span>발견</button><button className="join-fab" onClick={()=>move("join")}><span>＋</span>Join</button><button className={tab === "ask" ? "active" : ""} onClick={()=>move("ask")}><span>💬</span>AI 질문</button><button className={tab === "profile" ? "active" : ""} onClick={()=>move("profile")}><span>🌾</span>홍성</button></nav>
+      <nav className="mobile-nav"><button className={tab === "home" ? "active" : ""} onClick={()=>move("home")}><span>🏠</span>홈</button><button className={tab === "place" ? "active" : ""} onClick={()=>move("place")}><span>🗺️</span>발견</button><button className="join-fab" onClick={()=>move("join")}><span>＋</span>Join</button><button className={tab === "ask" ? "active" : ""} onClick={()=>move("ask")}><span>💬</span>AI 질문</button><button className={tab === "profile" ? "active" : ""} onClick={()=>move("profile")}><span>👤</span>프로필</button></nav>
       {creatingJoin && <div className="modal-backdrop" role="presentation" onMouseDown={() => setCreatingJoin(false)}><section className="join-modal" role="dialog" aria-modal="true" aria-labelledby="join-create-title" onMouseDown={(event) => event.stopPropagation()}><button className="modal-close" type="button" aria-label="닫기" onClick={() => setCreatingJoin(false)}>×</button><span className="mini-label">NEW JOIN</span><h2 id="join-create-title">새로운 Join 만들기</h2><p>함께하고 싶은 일정과 모집 내용을 알려주세요.</p><form onSubmit={saveJoin}><label>제목<input required maxLength={40} value={joinDraft.title} onChange={(event) => setJoinDraft({...joinDraft, title:event.target.value})} placeholder="예: 함께 오름 일몰 보러 가요" /></label><label>소개<textarea required maxLength={300} rows={4} value={joinDraft.description} onChange={(event) => setJoinDraft({...joinDraft, description:event.target.value})} placeholder="어떤 시간을 함께 보내고 싶은지 적어주세요" /></label><div className="form-grid"><label>장소<input required maxLength={60} value={joinDraft.location} onChange={(event) => setJoinDraft({...joinDraft, location:event.target.value})} placeholder="만나는 장소" /></label><label>주제<select value={joinDraft.keyword} onChange={(event) => setJoinDraft({...joinDraft, keyword:event.target.value})}><option>여행</option><option>맛집</option><option>산책</option><option>액티비티</option><option>기타</option></select></label><label>날짜<input required type="date" value={joinDraft.date} onChange={(event) => setJoinDraft({...joinDraft, date:event.target.value})} /></label><label>시간<input required type="time" value={joinDraft.time} onChange={(event) => setJoinDraft({...joinDraft, time:event.target.value})} /></label><label>모집 인원<input required type="number" min={2} max={20} value={joinDraft.max} onChange={(event) => setJoinDraft({...joinDraft, max:event.target.value})} /></label></div><button className="primary submit-join" type="submit" disabled={savingJoin}>{savingJoin ? "등록 중…" : "Join 등록하기"}</button></form></section></div>}
       {editingNickname && <div className="modal-backdrop" role="presentation" onMouseDown={() => setEditingNickname(false)}><section className="nickname-modal" role="dialog" aria-modal="true" aria-labelledby="nickname-title" onMouseDown={(event) => event.stopPropagation()}><button className="modal-close" type="button" aria-label="닫기" onClick={() => setEditingNickname(false)}>×</button><span className="mini-label">MY PROFILE</span><h2 id="nickname-title">닉네임 바꾸기</h2><p>Join과 프로필에 표시할 이름을 정해 주세요.</p><form onSubmit={saveNickname}><label htmlFor="nickname">닉네임</label><input id="nickname" autoFocus minLength={2} maxLength={20} value={nicknameDraft} onChange={(event) => setNicknameDraft(event.target.value)} placeholder="2~20자로 입력" /><small>{nicknameDraft.trim().length}/20</small><button className="primary" type="submit" disabled={savingNickname || nicknameDraft.trim().length < 2}>{savingNickname ? "저장 중…" : "닉네임 저장"}</button></form></section></div>}
       {toast && <div className="toast" role="status">{toast}</div>}
-      <footer><div className="shell"><span className="brand-mark">이</span><p><b>홍성, 이어가유 · 홍성메이트</b><small>오늘의 인연이 다음 방문으로.</small></p><i>v5 · Join Reset (fork of Bucket Jeju)</i></div></footer>
+      <footer><div className="shell"><span className="brand-mark">이</span><p><b>홍성, 이어가유</b><small>오늘의 인연이 다음 방문으로.</small></p></div></footer>
     </main>
   );
 }
