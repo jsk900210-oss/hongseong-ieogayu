@@ -54,7 +54,7 @@ export async function PATCH(request: Request) {
   if (isOnboarding && (!/^HS-\d{2}-\d{2}$/.test(cohortCode) || !stayPeriod || !interests)) {
     return NextResponse.json({ error: "기수 코드, 체류 기간, 관심사를 모두 입력해 주세요." }, { status: 400 });
   }
-  const allowedCohorts = (process.env.COHORT_CODES ?? "")
+  const allowedCohorts = (process.env.COHORT_CODES ?? (process.env.NODE_ENV === "development" ? "HS-01-01" : ""))
     .split(",")
     .map((code) => code.trim().toUpperCase())
     .filter(Boolean);
