@@ -1,0 +1,1 @@
+ALTER TABLE users ADD COLUMN stay_area text NOT NULL DEFAULT '';

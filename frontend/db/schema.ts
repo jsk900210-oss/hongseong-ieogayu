@@ -11,6 +11,7 @@ export const users = sqliteTable(
     memberType: text("member_type").notNull().default("general"),
     cohortCode: text("cohort_code").notNull().default(""),
     stayPeriod: text("stay_period").notNull().default(""),
+    stayArea: text("stay_area").notNull().default(""),
     interests: text("interests").notNull().default(""),
     profileVisibility: text("profile_visibility").notNull().default("mates"),
     onboardingCompletedAt: integer("onboarding_completed_at", { mode: "timestamp" }),

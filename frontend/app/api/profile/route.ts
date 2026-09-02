@@ -14,6 +14,7 @@ export async function GET() {
       memberType: users.memberType,
       cohortCode: users.cohortCode,
       stayPeriod: users.stayPeriod,
+      stayArea: users.stayArea,
       interests: users.interests,
       profileVisibility: users.profileVisibility,
       onboardingCompletedAt: users.onboardingCompletedAt,
@@ -32,7 +33,7 @@ export async function PATCH(request: Request) {
   }
 
   const body = (await request.json().catch(() => null)) as
-    | { displayName?: unknown; memberType?: unknown; masterCode?: unknown; cohortCode?: unknown; stayPeriod?: unknown; interests?: unknown; profileVisibility?: unknown; completeOnboarding?: unknown }
+    | { displayName?: unknown; memberType?: unknown; masterCode?: unknown; cohortCode?: unknown; stayPeriod?: unknown; stayArea?: unknown; interests?: unknown; profileVisibility?: unknown; completeOnboarding?: unknown }
     | null;
   const displayName =
     typeof body?.displayName === "string" ? body.displayName.trim() : "";
@@ -49,13 +50,15 @@ export async function PATCH(request: Request) {
   const masterCode = typeof body?.masterCode === "string" ? body.masterCode.trim() : "";
   const cohortCode = typeof body?.cohortCode === "string" ? body.cohortCode.trim().toUpperCase() : "";
   const stayPeriod = typeof body?.stayPeriod === "string" ? body.stayPeriod.trim() : "";
+  const stayArea = typeof body?.stayArea === "string" ? body.stayArea.trim() : "";
   const interests = Array.isArray(body?.interests)
     ? body.interests.filter((item): item is string => typeof item === "string").slice(0, 5).join(",")
     : "";
-  const profileVisibility = body?.profileVisibility === "public" ? "public" : "mates";
+  const visibilityOptions = memberType === "friends" ? ["private", "cohort", "friends", "public"] : ["private", "public"];
+  const profileVisibility = typeof body?.profileVisibility === "string" && visibilityOptions.includes(body.profileVisibility) ? body.profileVisibility : "private";
 
-  if (isOnboarding && (!stayPeriod || !interests)) {
-    return NextResponse.json({ error: "체류 계획과 관심사를 모두 입력해 주세요." }, { status: 400 });
+  if (isOnboarding && (!stayPeriod || !stayArea || !interests)) {
+    return NextResponse.json({ error: "체류 계획, 체류 장소, 관심사를 모두 입력해 주세요." }, { status: 400 });
   }
   const allowedMasterCodes = (process.env.MASTER_ACCESS_CODES ?? (process.env.NODE_ENV === "development" ? "MASTER-LOCAL" : ""))
     .split(",")
@@ -69,7 +72,7 @@ export async function PATCH(request: Request) {
   }
 
   const update = isOnboarding
-    ? { displayName: displayName || user.displayName, memberType, cohortCode, stayPeriod, interests, profileVisibility, onboardingCompletedAt: new Date(), updatedAt: new Date() }
+    ? { displayName: displayName || user.displayName, memberType, cohortCode, stayPeriod, stayArea, interests, profileVisibility, onboardingCompletedAt: new Date(), updatedAt: new Date() }
     : { displayName, updatedAt: new Date() };
 
   await getDb()
