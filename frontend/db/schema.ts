@@ -116,3 +116,33 @@ export const placeVerificationRuns = sqliteTable("place_verification_runs", {
   checkedAt: integer("checked_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
 });
 
+export const festivalSchedules = sqliteTable("festival_schedules", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  season: text("season").notNull().default(""),
+  location: text("location").notNull().default(""),
+  description: text("description").notNull().default(""),
+  startDate: text("start_date"),
+  endDate: text("end_date"),
+  scheduleStatus: text("schedule_status").notNull().default("unconfirmed"),
+  verificationStatus: text("verification_status").notNull().default("pending"),
+  sourceName: text("source_name").notNull().default(""),
+  sourceUrl: text("source_url").notNull().default(""),
+  contactPhone: text("contact_phone").notNull().default(""),
+  lastCheckedAt: integer("last_checked_at", { mode: "timestamp" }),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+});
+
+export const festivalVerificationRuns = sqliteTable("festival_verification_runs", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  festivalId: text("festival_id").notNull().references(() => festivalSchedules.id, { onDelete: "cascade" }),
+  sourceName: text("source_name").notNull(),
+  sourceUrl: text("source_url").notNull(),
+  observedStartDate: text("observed_start_date"),
+  observedEndDate: text("observed_end_date"),
+  observedStatus: text("observed_status").notNull().default("found"),
+  evidence: text("evidence").notNull().default(""),
+  checkedAt: integer("checked_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+});
+

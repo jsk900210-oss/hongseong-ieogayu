@@ -1,0 +1,31 @@
+[
+  {
+    "festivalId": "namdanghang-cockle",
+    "name": "홍성 남당항 새조개축제",
+    "season": "겨울",
+    "location": "충남 홍성군 서부면 남당항로213번길 1-1",
+    "description": "제철 새조개와 바다를 함께 즐기는 겨울 먹거리 축제",
+    "sourceName": "대한민국 구석구석",
+    "sourceUrl": "https://travelweek.visitkorea.or.kr/kfes/detail/fstvlDetail.do?cntntsNm=%ED%99%8D%EC%84%B1%EB%82%A8%EB%8B%B9%ED%95%AD%EC%83%88%EC%A1%B0%EA%B0%9C%EC%99%80%ED%95%A8%EA%BB%98%ED%95%98%EB%8A%94%EC%88%98%EC%82%B0%EB%AC%BC%EC%B6%95%EC%A0%9C&fstvlCntntsId=86e5f381-79ef-4581-8676-a1e5b1610f35",
+    "contactPhone": "010-5433-8196"
+  },
+  {
+    "festivalId": "namdanghang-prawn",
+    "name": "홍성 남당항 대하축제",
+    "season": "가을",
+    "location": "홍성 남당항 특설무대 및 남당항 일원",
+    "description": "가을 바다와 제철 대하를 맛보는 대표 먹거리 축제",
+    "sourceName": "홍성남당항축제추진위원회 안내",
+    "sourceUrl": "https://www.koreatriptips.com/festivals-events-performances/140911.html",
+    "contactPhone": "010-5433-8196"
+  },
+  {
+    "festivalId": "hongseong-global-bbq",
+    "name": "홍성글로벌바비큐페스티벌",
+    "season": "가을",
+    "location": "충남 홍성군 홍성읍 아문길 27",
+    "description": "홍성한우와 한돈을 함께 즐기는 미식 축제",
+    "sourceName": "대한민국 구석구석",
+    "sourceUrl": "https://korean.visitkorea.or.kr/kfes/detail/fstvlDetail.do?fstvlCntntsId=2f7a5940-bfdd-4728-a085-9ea9698b0e2f"
+  }
+]

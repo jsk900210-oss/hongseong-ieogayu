@@ -73,10 +73,7 @@ const HIKE_POINTS = [
   { name: "백월산", category: "약 394m · 초급~중급", icon: "🥾", lat: 36.594, lon: 126.627 },
   { name: "봉수산", category: "약 484m · 중급", icon: "🥾", lat: 36.622, lon: 126.757 },
 ] as const;
-const REVIEW_POINTS = [
-  { name: "홍성전통시장 메이트 맛집", category: "리뷰 1 · 추천 5", icon: "🥣", lat: 36.6021991708, lon: 126.6680367636 },
-  { name: "남당항 포구 분식", category: "리뷰 1 · 추천 4", icon: "🥣", lat: 36.537983719, lon: 126.4710062376 },
-] as const;
+const REVIEW_POINTS: readonly { name: string; category: string; icon: string; lat: number; lon: number }[] = [];
 const LIFESTYLE_POINTS: readonly { name: string; category: string; icon: string; lat: number; lon: number }[] = [];
 const CATEGORY_LABELS: Record<DiscoveryView, string> = { around: "전체 장소", markets: "오일장", festivals: "축제", reviews: "메이트 추천 맛집", recommended: "메이트 추천 플레이스", hikes: "등산" };
 const CATEGORY_DESCRIPTIONS: Record<DiscoveryView, string> = {
@@ -107,10 +104,7 @@ const festivalDateLabel = (festival: FestivalPoint) => festival.startDate && fes
   : "2026년 일정 미정";
 const categoryItems = (view: DiscoveryView) => view === "markets" ? MARKET_POINTS : view === "festivals" ? sortedFestivals() : view === "reviews" ? REVIEW_POINTS : view === "hikes" ? HIKE_POINTS : view === "recommended" ? LIFESTYLE_POINTS : PLACES;
 
-const seedReviews: Review[] = [
-  { id: 1, place: "시장 안 작은 국밥집", category: "한식", menu: "소머리국밥", rating: 5, body: "장날 아침에 갔는데 국물이 담백하고 혼자 앉기도 편했어요. 상호보다 시장 동문 쪽 빨간 간판을 찾으세요!", author: "해솔", visitedAt: "2026-08-29" },
-  { id: 2, place: "남당항 포구 분식", category: "분식", menu: "해물라면", rating: 4, body: "바다 보고 들어가 따뜻하게 먹기 좋았어요. 양이 많아 둘이 나누기에도 충분해요.", author: "다정", visitedAt: "2026-08-24" },
-];
+const seedReviews: Review[] = [];
 
 const isMarketDay = (date: Date, days: number[]) => days.includes(date.getDate() === 10 ? 10 : date.getDate() % 10);
 const nextMarketDate = (days: number[], from = new Date()) => {
@@ -269,7 +263,7 @@ export default function LocalDiscovery({ displayName, signedIn, onRequireLogin }
 
     {view === "festivals" && <FestivalList today={today} />}
 
-    {view === "reviews" && <div className="notice-section"><div className="review-title-row"><div><span className="mini-label">MATE-ONLY REVIEW</span><h2>검색보다 생생한, 메이트의 한 끼</h2><p>직접 다녀온 참가자의 경험만 차곡차곡 모아요.</p></div><button className="primary" onClick={() => signedIn ? setCreating(true) : onRequireLogin()}>맛집 기록하기 ＋</button></div><div className="review-grid">{reviews.map((review) => <article className="review-card" key={review.id}><div className="review-meta"><span>{review.category}</span><b>{"★".repeat(review.rating)}<i>{"★".repeat(5-review.rating)}</i></b></div><h3>{review.place}</h3><strong>메이트의 픽 · {review.menu}</strong><p>“{review.body}”</p><footer><span className="review-avatar">{review.author.slice(0,1)}</span><span><b>{review.author}</b><small>{review.visitedAt} 방문</small></span><em>직접 방문</em></footer></article>)}</div></div>}
+    {view === "reviews" && <div className="notice-section"><div className="review-title-row"><div><span className="mini-label">MATE-ONLY REVIEW</span><h2>검색보다 생생한, 메이트의 한 끼</h2><p>직접 다녀온 참가자의 경험만 차곡차곡 모아요.</p></div><button className="primary" onClick={() => signedIn ? setCreating(true) : onRequireLogin()}>맛집 기록하기 ＋</button></div>{reviews.length ? <div className="review-grid">{reviews.map((review) => <article className="review-card" key={review.id}><div className="review-meta"><span>{review.category}</span><b>{"★".repeat(review.rating)}<i>{"★".repeat(5-review.rating)}</i></b></div><h3>{review.place}</h3><strong>메이트의 픽 · {review.menu}</strong><p>“{review.body}”</p><footer><span className="review-avatar">{review.author.slice(0,1)}</span><span><b>{review.author}</b><small>{review.visitedAt} 방문</small></span><em>직접 방문</em></footer></article>)}</div> : <div className="empty-filter-result review-empty"><span>🥣</span><b>아직 등록된 메이트 맛집이 없어요</b><p>첫 방문 리뷰를 남겨 홍성의 진짜 맛집 지도를 함께 채워 주세요.</p></div>}</div>}
 
     {creating && <div className="modal-backdrop" role="presentation" onMouseDown={() => setCreating(false)}><section className="join-modal review-modal" role="dialog" aria-modal="true" aria-labelledby="review-title" onMouseDown={(event) => event.stopPropagation()}><button className="modal-close" type="button" aria-label="닫기" onClick={() => setCreating(false)}>×</button><span className="mini-label">NEW LOCAL REVIEW</span><h2 id="review-title">내가 찾은 홍성 맛집</h2><p>광고가 아닌, 직접 먹어본 경험을 알려주세요.</p><form onSubmit={saveReview}><label>가게 이름 또는 찾는 방법<input required maxLength={60} value={draft.place} onChange={(e)=>setDraft({...draft, place:e.target.value})} placeholder="예: 홍성시장 동문 빨간 간판집" /></label><div className="form-grid"><label>분류<select value={draft.category} onChange={(e)=>setDraft({...draft,category:e.target.value})}><option>한식</option><option>분식</option><option>카페</option><option>해산물</option><option>기타</option></select></label><label>먹어본 메뉴<input required value={draft.menu} onChange={(e)=>setDraft({...draft,menu:e.target.value})} placeholder="가장 추천하는 메뉴" /></label><label>방문일<input required type="date" value={draft.visitedAt} onChange={(e)=>setDraft({...draft,visitedAt:e.target.value})} /></label><label>별점<select value={draft.rating} onChange={(e)=>setDraft({...draft,rating:Number(e.target.value)})}>{[5,4,3,2,1].map((score)=><option key={score} value={score}>{"★".repeat(score)} {score}점</option>)}</select></label></div><label>솔직한 한 줄 리뷰<textarea required minLength={10} maxLength={300} rows={4} value={draft.body} onChange={(e)=>setDraft({...draft,body:e.target.value})} placeholder="누구와 갔는지, 분위기와 팁도 함께 적어주세요" /></label><button className="primary submit-join" type="submit">리뷰 등록하기</button></form></section></div>}
   </section>;

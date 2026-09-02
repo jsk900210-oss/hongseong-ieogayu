@@ -1,0 +1,27 @@
+name: Festival schedule verification agent
+
+on:
+  schedule:
+    - cron: "15 0,6,12,18 * * *"
+  workflow_dispatch:
+
+jobs:
+  verify-festivals:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Send verified source observations
+        env:
+          FESTIVAL_AGENT_URL: ${{ secrets.FESTIVAL_AGENT_URL }}
+          FESTIVAL_AGENT_TOKEN: ${{ secrets.FESTIVAL_AGENT_TOKEN }}
+        run: |
+          test -n "$FESTIVAL_AGENT_URL"
+          test -n "$FESTIVAL_AGENT_TOKEN"
+          node frontend/scripts/check-festival-sources.mjs
+          curl --fail --request POST "$FESTIVAL_AGENT_URL/api/festival-agent/sync" \
+            --header "Authorization: Bearer $FESTIVAL_AGENT_TOKEN" \
+            --header "Content-Type: application/json" \
+            --data @festival-agent-payload.json

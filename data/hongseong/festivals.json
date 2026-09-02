@@ -1,9 +1,9 @@
 [
-  { "id": "namdanghang-cockle", "name": "홍성 남당항 새조개축제", "season": "겨울", "startDate": null, "endDate": null, "location": "남당항 일원", "description": "제철 새조개와 바다를 함께 즐기는 겨울 먹거리 축제" },
-  { "id": "history-people", "name": "홍성역사인물축제", "season": "봄", "startDate": null, "endDate": null, "location": "홍주읍성 일원", "description": "홍성이 낳은 역사 인물을 체험과 공연으로 만나요" },
+  { "id": "namdanghang-cockle", "name": "홍성 남당항 새조개축제", "season": "겨울", "startDate": "2026-01-17", "endDate": "2026-04-30", "location": "남당항 일원", "description": "제철 새조개와 바다를 함께 즐기는 겨울 먹거리 축제" },
+  { "id": "history-people", "name": "홍성역사인물축제", "season": "봄", "startDate": "2026-05-01", "endDate": "2026-05-03", "location": "홍주읍성 일원", "description": "홍성이 낳은 역사 인물을 체험과 공연으로 만나요" },
   { "id": "naepo-culture", "name": "내포문화축제", "season": "가을", "startDate": null, "endDate": null, "location": "홍성군 일원", "description": "내포 지역의 문화와 공동체를 잇는 지역 축제" },
-  { "id": "namdanghang-prawn", "name": "홍성 남당항 대하축제", "season": "가을", "startDate": null, "endDate": null, "location": "남당항 일원", "description": "가을 바다와 제철 대하를 맛보는 대표 먹거리 축제" },
+  { "id": "namdanghang-prawn", "name": "홍성 남당항 대하축제", "season": "가을", "startDate": "2026-09-04", "endDate": "2026-11-08", "location": "남당항 일원", "description": "가을 바다와 제철 대하를 맛보는 대표 먹거리 축제" },
   { "id": "gwangcheon-gim", "name": "광천김·토굴새우젓 대축제", "season": "가을", "startDate": null, "endDate": null, "location": "광천전통시장 일원", "description": "광천의 김과 토굴새우젓을 한자리에서 만나요" },
-  { "id": "hongseong-hanu", "name": "홍성한우 바비큐 페스티벌", "season": "가을", "startDate": null, "endDate": null, "location": "홍주읍성 일원", "description": "홍성한우를 중심으로 열리는 미식 페스티벌" },
+  { "id": "hongseong-global-bbq", "name": "홍성글로벌바비큐페스티벌", "season": "가을", "startDate": "2026-10-29", "endDate": "2026-11-01", "location": "홍주읍성 일원", "description": "홍성한우와 한돈을 함께 즐기는 미식 축제" },
   { "id": "guhang-chrysanthemum", "name": "구항면 국화축제", "season": "가을", "startDate": null, "endDate": null, "location": "구항면 일원", "description": "마을이 함께 가꾼 국화와 늦가을 풍경을 즐겨요" }
 ]
