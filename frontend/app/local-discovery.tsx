@@ -12,7 +12,7 @@ type UserLocation = { lat: number; lon: number };
 const HONGSEONG_CENTER: UserLocation = { lat: 36.601, lon: 126.661 };
 
 const PLACES = [
-  { name: "남당항", category: "대하 · 새조개", icon: "🦐🐚", lat: 36.537983719, lon: 126.4710062376 },
+  { name: "남당항", category: "대하 · 새조개", icon: "🦐", lat: 36.537983719, lon: 126.4710062376 },
   { name: "홍성스카이타워(속동전망대)", category: "천수만 전망 · 노을", icon: "🔭", lat: 36.576981901, lon: 126.4646724488 },
   { name: "죽도", category: "섬 트레킹 · 대나무숲", icon: "🏝️", lat: 36.5193186883, lon: 126.4411594216 },
   { name: "궁리포구", category: "포구 · 해안 드라이브", icon: "⛵", lat: 36.6092, lon: 126.4634 },
