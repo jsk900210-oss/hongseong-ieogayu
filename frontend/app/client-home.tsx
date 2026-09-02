@@ -234,7 +234,9 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
           <button className={tab === "ask" ? "active" : ""} onClick={() => move("ask")}>AI 질문</button>
           <button className={tab === "profile" ? "active" : ""} onClick={() => move("profile")}>내 프로필</button>
         </nav>
-        <button className="user-chip" onClick={() => move("profile")}><span>👤</span><b>{displayName || "로그인"}</b></button>
+        {user
+          ? <button className="user-chip" onClick={() => move("profile")}><span>👤</span><b>{displayName}</b></button>
+          : <a className="topbar-login" href="/api/auth/google?return_to=/"><span>G</span> 로그인</a>}
       </header>
 
       {tab === "home" && <>

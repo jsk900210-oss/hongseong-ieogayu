@@ -17,6 +17,7 @@ button { cursor:pointer; }
 .desktop-nav button.active { color:var(--green); }.desktop-nav button.active:after { content:""; height:3px; left:25%; right:25%; bottom:0; border-radius:3px 3px 0 0; background:var(--orange); position:absolute; }
 .user-chip { border:1px solid var(--line); background:white; border-radius:30px; padding:5px 10px 5px 5px; display:flex; align-items:center; gap:8px; color:var(--ink); }
 .user-chip span { width:32px; height:32px; border-radius:50%; background:#fff0c7; display:grid; place-items:center; }.user-chip b{font-size:12px}.user-chip i{font-style:normal;color:#9aaba7}
+.topbar-login{display:flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:22px;background:#fff;color:var(--ink);padding:9px 14px;text-decoration:none;font-size:12px;font-weight:800;box-shadow:0 3px 0 rgba(107,48,40,.08)}.topbar-login span{display:grid;place-items:center;width:18px;height:18px;border-radius:50%;background:#fff0c7;color:#a94e32;font-family:Arial,sans-serif;font-size:11px;font-weight:900}.topbar-login:hover{border-color:var(--orange);transform:translateY(-1px)}
 .topbar-actions{display:flex;align-items:center;gap:8px}
 .language-picker{display:flex;align-items:center;gap:6px;border:1px solid var(--line);background:white;border-radius:24px;padding:7px 10px;color:#60746f}
 .language-picker span{font-size:9px;font-weight:800}
