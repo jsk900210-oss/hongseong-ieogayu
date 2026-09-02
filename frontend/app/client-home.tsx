@@ -333,6 +333,10 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
           </div>
           <div className="hero-art hongseong-hero" role="img" aria-label="황금 들녘과 홍성 구옥 스테이 풍경"><HongseongWeather /></div>
         </section>
+        <section className="friends-intro shell" aria-labelledby="friends-title">
+          <div className="friends-copy"><span className="mini-label">IEUMI FRIENDS</span><h2 id="friends-title">홍성의 하루를<br/>함께 이어가는 친구들</h2><p>한결이와 이음이 프렌즈가 장날, 바다, 식탁에서 만난 사람과 장소의 이야기를 기록해요.</p><button className="text-btn" onClick={() => move("place")}>친구들과 홍성 둘러보기</button></div>
+          <div className="friends-art" aria-label="한결이와 이음이 프렌즈 캐릭터"><img className="friends-cast" src="/brand/ieumi-friends.png" alt="알이, 새미, 김이, 하루, 두리" /><img className="friends-hangyeol" src="/brand/hangyeol.png" alt="한결이" /></div>
+        </section>
         <section className="join-preview"><div className="shell"><div className="section-heading light"><div><span className="mini-label">JOIN · READY</span><h2>{joins.length > 0 ? "지금 참여할 수 있는 Join" : "첫 Join을 기다리고 있어요"}</h2><p>{joins.length > 0 ? `가장 가까운 일정부터 ${Math.min(joins.length, 3)}개를 확인해 보세요.` : "계정으로 로그인한 뒤 새로운 Join을 만들어보세요."}</p></div><button onClick={() => move("join")}>{joins.length > 0 ? "전체 Join 보기 →" : "Join 만들기 →"}</button></div>{joins.length > 0 && <div className="join-grid">{scheduledJoins.slice(0, 3).map((item) => <JoinCard key={item.id} item={item} joined={joined.includes(item.id)} onJoin={() => toggleJoin(item)} onDelete={() => deleteJoin(item.id)} onChat={() => openChat(item)} />)}</div>}</div></section>
       </>}
 
