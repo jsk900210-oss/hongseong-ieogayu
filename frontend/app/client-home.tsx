@@ -34,12 +34,17 @@ type AskResponse = {
   }>;
 };
 
+const ONBOARDING_INTERESTS = ["맛집 탐방", "로컬 창업", "농사·텃밭", "산책·등산", "사진·기록", "함께 요리", "반려동물", "문화·축제"];
+
 export default function ClientHome({ user }: { user: GoogleUser | null }) {
   const [tab, setTab] = useState<Tab>("home");
   const [displayName, setDisplayName] = useState(user?.displayName ?? "");
   const [nicknameDraft, setNicknameDraft] = useState(user?.displayName ?? "");
   const [editingNickname, setEditingNickname] = useState(false);
   const [savingNickname, setSavingNickname] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [savingOnboarding, setSavingOnboarding] = useState(false);
+  const [onboardingDraft, setOnboardingDraft] = useState({ cohortCode: "", stayPeriod: "2주 체류", interests: [] as string[], profileVisibility: "mates" });
   const [joins, setJoins] = useState<JoinItem[]>([]);
   const [creatingJoin, setCreatingJoin] = useState(false);
   const [savingJoin, setSavingJoin] = useState(false);
@@ -70,6 +75,23 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
       .then((result: { joins?: JoinItem[] }) => setJoins(result.joins ?? []))
       .catch(() => setToast("Join 목록을 불러오지 못했어요."));
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    fetch("/api/profile")
+      .then((response) => response.ok ? response.json() : null)
+      .then((result: { profile?: { cohortCode?: string; stayPeriod?: string; interests?: string; profileVisibility?: string; onboardingCompletedAt?: string | null } } | null) => {
+        const profile = result?.profile;
+        if (!profile?.onboardingCompletedAt) setShowOnboarding(true);
+        if (profile) setOnboardingDraft({
+          cohortCode: profile.cohortCode ?? "",
+          stayPeriod: profile.stayPeriod || "2주 체류",
+          interests: profile.interests ? profile.interests.split(",").filter(Boolean) : [],
+          profileVisibility: profile.profileVisibility ?? "mates",
+        });
+      })
+      .catch(() => undefined);
+  }, [user]);
 
   const move = (next: Tab) => {
     setTab(next);
@@ -103,6 +125,32 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
     setToast("닉네임을 바꿨어요.");
     window.setTimeout(() => setToast(""), 1800);
   };
+
+  const saveOnboarding = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setSavingOnboarding(true);
+    const response = await fetch("/api/profile", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ displayName, ...onboardingDraft, completeOnboarding: true }),
+    });
+    const result = await response.json() as { error?: string };
+    setSavingOnboarding(false);
+    if (!response.ok) {
+      setToast(result.error ?? "참가자 인증을 완료하지 못했어요.");
+      return;
+    }
+    setShowOnboarding(false);
+    setToast("기수 인증이 완료됐어요. 홍성에서 만나유!");
+    window.setTimeout(() => setToast(""), 2200);
+  };
+
+  const toggleInterest = (interest: string) => setOnboardingDraft((current) => ({
+    ...current,
+    interests: current.interests.includes(interest)
+      ? current.interests.filter((item) => item !== interest)
+      : current.interests.length < 5 ? [...current.interests, interest] : current.interests,
+  }));
 
   const saveJoin = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -240,13 +288,14 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
       </section>}
 
       {tab === "profile" && <section className="subpage shell profile-page">
-        <div className="profile-head"><div className="avatar">👤</div><div><span className="eyebrow">ACCOUNT</span><h1>{displayName || "내 계정 만들기"}</h1><p>{user ? `${user.email} 계정으로 연결되었습니다.` : "로그인 후 서비스 내부 사용자 계정이 자동으로 생성됩니다."}</p><div className="stats"><span><b>0</b> Join</span><span><b>0</b> 신청</span><span><b>0</b> 참여 기록</span></div></div>{user && <button type="button" onClick={() => setEditingNickname(true)}>닉네임 변경</button>}</div>
+        <div className="profile-head"><div className="avatar">👤</div><div><span className="eyebrow">ACCOUNT</span><h1>{displayName || "내 계정 만들기"}</h1><p>{user ? `${user.email} 계정으로 연결되었습니다.` : "로그인 후 서비스 내부 사용자 계정이 자동으로 생성됩니다."}</p><div className="stats"><span><b>0</b> Join</span><span><b>0</b> 신청</span><span><b>0</b> 참여 기록</span></div></div>{user && <div className="profile-actions"><button type="button" onClick={() => setShowOnboarding(true)}>기수 정보</button><button type="button" onClick={() => setEditingNickname(true)}>닉네임 변경</button></div>}</div>
         <div className="keyword-panel" style={{marginTop: 24}}><div className="panel-title"><div><span className="mini-label">GOOGLE ACCOUNT</span><h2>{user ? "Google 계정 연결 완료" : "Google로 시작하기"}</h2></div><span className="test-badge">{user ? "로그인됨" : "로그인 필요"}</span></div><p>Google 비밀번호는 저장하지 않습니다. 인증 후 내부 사용자 ID를 만들고 Join 생성·신청·취소·참여 기록을 계정별로 관리합니다.</p>{user ? <a className="primary" href="/api/auth/logout">로그아웃</a> : <a className="primary google-login" href="/api/auth/google?return_to=/">G Google로 로그인</a>}</div>
       </section>}
 
       <nav className="mobile-nav"><button className={tab === "home" ? "active" : ""} onClick={()=>move("home")}><span>🏠</span>홈</button><button className={tab === "place" ? "active" : ""} onClick={()=>move("place")}><span>🗺️</span>발견</button><button className="join-fab" onClick={()=>move("join")}><span>＋</span>Join</button><button className={tab === "ask" ? "active" : ""} onClick={()=>move("ask")}><span>💬</span>AI 질문</button><button className={tab === "profile" ? "active" : ""} onClick={()=>move("profile")}><span>👤</span>프로필</button></nav>
       {creatingJoin && <div className="modal-backdrop" role="presentation" onMouseDown={() => setCreatingJoin(false)}><section className="join-modal" role="dialog" aria-modal="true" aria-labelledby="join-create-title" onMouseDown={(event) => event.stopPropagation()}><button className="modal-close" type="button" aria-label="닫기" onClick={() => setCreatingJoin(false)}>×</button><span className="mini-label">NEW JOIN</span><h2 id="join-create-title">새로운 Join 만들기</h2><p>함께하고 싶은 일정과 모집 내용을 알려주세요.</p><form onSubmit={saveJoin}><label>제목<input required maxLength={40} value={joinDraft.title} onChange={(event) => setJoinDraft({...joinDraft, title:event.target.value})} placeholder="예: 함께 오름 일몰 보러 가요" /></label><label>소개<textarea required maxLength={300} rows={4} value={joinDraft.description} onChange={(event) => setJoinDraft({...joinDraft, description:event.target.value})} placeholder="어떤 시간을 함께 보내고 싶은지 적어주세요" /></label><div className="form-grid"><label>장소<input required maxLength={60} value={joinDraft.location} onChange={(event) => setJoinDraft({...joinDraft, location:event.target.value})} placeholder="만나는 장소" /></label><label>주제<select value={joinDraft.keyword} onChange={(event) => setJoinDraft({...joinDraft, keyword:event.target.value})}><option>여행</option><option>맛집</option><option>산책</option><option>액티비티</option><option>기타</option></select></label><label>날짜<input required type="date" value={joinDraft.date} onChange={(event) => setJoinDraft({...joinDraft, date:event.target.value})} /></label><label>시간<input required type="time" value={joinDraft.time} onChange={(event) => setJoinDraft({...joinDraft, time:event.target.value})} /></label><label>모집 인원<input required type="number" min={2} max={20} value={joinDraft.max} onChange={(event) => setJoinDraft({...joinDraft, max:event.target.value})} /></label></div><button className="primary submit-join" type="submit" disabled={savingJoin}>{savingJoin ? "등록 중…" : "Join 등록하기"}</button></form></section></div>}
       {editingNickname && <div className="modal-backdrop" role="presentation" onMouseDown={() => setEditingNickname(false)}><section className="nickname-modal" role="dialog" aria-modal="true" aria-labelledby="nickname-title" onMouseDown={(event) => event.stopPropagation()}><button className="modal-close" type="button" aria-label="닫기" onClick={() => setEditingNickname(false)}>×</button><span className="mini-label">MY PROFILE</span><h2 id="nickname-title">닉네임 바꾸기</h2><p>Join과 프로필에 표시할 이름을 정해 주세요.</p><form onSubmit={saveNickname}><label htmlFor="nickname">닉네임</label><input id="nickname" autoFocus minLength={2} maxLength={20} value={nicknameDraft} onChange={(event) => setNicknameDraft(event.target.value)} placeholder="2~20자로 입력" /><small>{nicknameDraft.trim().length}/20</small><button className="primary" type="submit" disabled={savingNickname || nicknameDraft.trim().length < 2}>{savingNickname ? "저장 중…" : "닉네임 저장"}</button></form></section></div>}
+      {showOnboarding && user && <div className="modal-backdrop onboarding-backdrop" role="presentation"><section className="onboarding-modal" role="dialog" aria-modal="true" aria-labelledby="onboarding-title"><span className="mini-label">HONGSEONG FRIENDS · 01</span><h2 id="onboarding-title">홍성프렌즈로<br/>함께할 준비를 해요</h2><p>기수 인증을 마치면 메이트 전용 Join과 방문 기록을 이용할 수 있어요.</p><form onSubmit={saveOnboarding}><label>기수 코드<input required pattern="HS-\\d{2}-\\d{2}" value={onboardingDraft.cohortCode} onChange={(event) => setOnboardingDraft({...onboardingDraft, cohortCode: event.target.value.toUpperCase()})} placeholder="예: HS-01-01" /><small>운영자가 안내한 코드를 입력해 주세요.</small></label><label>홍성 체류 계획<select value={onboardingDraft.stayPeriod} onChange={(event) => setOnboardingDraft({...onboardingDraft, stayPeriod: event.target.value})}><option>2주 체류</option><option>1개월 체류</option><option>3개월 이상</option><option>아직 정하는 중</option></select></label><fieldset><legend>함께 나누고 싶은 관심사 <small>최대 5개</small></legend><div className="interest-chips">{ONBOARDING_INTERESTS.map((interest) => <button type="button" key={interest} className={onboardingDraft.interests.includes(interest) ? "selected" : ""} onClick={() => toggleInterest(interest)}>{interest}</button>)}</div></fieldset><fieldset><legend>프로필 공개 범위</legend><div className="visibility-options"><label><input type="radio" checked={onboardingDraft.profileVisibility === "mates"} onChange={() => setOnboardingDraft({...onboardingDraft, profileVisibility: "mates"})} /> 같은 기수 메이트에게만</label><label><input type="radio" checked={onboardingDraft.profileVisibility === "public"} onChange={() => setOnboardingDraft({...onboardingDraft, profileVisibility: "public"})} /> 앱 참가자 전체에게</label></div></fieldset><p className="onboarding-notice">개인 연락처·정확한 숙소 위치는 공개하지 않아요. 촬영 및 공동생활 약속은 프로그램 시작 전 별도 동의로 안내합니다.</p><button className="primary" type="submit" disabled={savingOnboarding || onboardingDraft.interests.length === 0}>{savingOnboarding ? "인증 중…" : "기수 인증 완료하기"}</button></form></section></div>}
       {toast && <div className="toast" role="status">{toast}</div>}
       <footer><div className="shell"><span className="brand-mark">이</span><p><b>홍성, 이어가유</b><small>오늘의 인연이 다음 방문으로.</small></p></div></footer>
     </main>

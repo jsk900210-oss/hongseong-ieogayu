@@ -8,6 +8,11 @@ export const users = sqliteTable(
     authProvider: text("auth_provider").notNull().default("sites"),
     email: text("email").notNull(),
     displayName: text("display_name").notNull(),
+    cohortCode: text("cohort_code").notNull().default(""),
+    stayPeriod: text("stay_period").notNull().default(""),
+    interests: text("interests").notNull().default(""),
+    profileVisibility: text("profile_visibility").notNull().default("mates"),
+    onboardingCompletedAt: integer("onboarding_completed_at", { mode: "timestamp" }),
     createdAt: integer("created_at", { mode: "timestamp" })
       .notNull()
       .default(sql`(unixepoch())`),
