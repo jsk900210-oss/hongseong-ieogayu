@@ -71,6 +71,14 @@ export const joinParticipants = sqliteTable(
   ],
 );
 
+export const joinMessages = sqliteTable("join_messages", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  joinId: integer("join_id").notNull().references(() => joins.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  body: text("body").notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+});
+
 export const places = sqliteTable(
   "places",
   {
