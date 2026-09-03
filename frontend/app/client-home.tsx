@@ -383,8 +383,8 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
         </section>
         <section className="friends-intro shell" aria-labelledby="friends-title" style={{ "--friend-art-height": `${friendLayout.artHeight}px`, "--recipe-cta-top": `${friendLayout.buttonTop}px`, "--recipe-cta-right": `${friendLayout.buttonRight}px` } as React.CSSProperties}>
           <div className="friends-copy"><span className="mini-label">IEUMI FRIENDS · RECIPE</span><h2 id="friends-title">홍성 친구들의 다양한 레시피 공유</h2><p>홍성의 바다와 밭, 시장에서 만난 재료로 친구들이 쉬운 한 끼 레시피를 나눠요.</p></div>
+          <button className="recipe-cta" type="button" onClick={() => move("recipe")}>홍성 재료 만나러 가기</button>
           <div className="friends-art" aria-label="한결이와 이음이 프렌즈 캐릭터">
-            <button className="recipe-cta" type="button" onClick={() => move("recipe")}>홍성 재료 만나러 가기</button>
             {IEUMI_FRIENDS.map((friend) => <button key={friend.id} type="button" className={`friend-3d friend-${friend.id}${selectedFriend?.id === friend.id ? " selected" : ""}`} onClick={() => setSelectedFriend({ ...friend, line: friend.lines[Math.floor(Math.random() * friend.lines.length)] })} aria-label={`${friend.name} 소개 보기`}><img src={friend.image} alt="" />{selectedFriend?.id === friend.id && <span className="friend-speech" role="status"><b>{friend.name}</b><span>{selectedFriend.line}</span></span>}</button>)}
           </div>
           {user && <button className="friend-layout-toggle" type="button" onClick={() => setShowFriendLayoutControls((open) => !open)}>{showFriendLayoutControls ? "배치 조정 닫기" : "배치 조정"}</button>}
