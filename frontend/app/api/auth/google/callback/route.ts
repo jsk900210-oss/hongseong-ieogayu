@@ -21,7 +21,9 @@ export async function GET(request: NextRequest) {
   if (!profile.sub || !profile.email || profile.email_verified === false) return NextResponse.redirect(new URL("/?auth_error=email", request.url));
   const session = await createGoogleSession({ id: `google:${profile.sub}`, email: profile.email, displayName: profile.name ?? profile.email.split("@")[0], fullName: profile.name ?? null });
   const returnTo = request.cookies.get("hongseong_auth_return")?.value ?? "/";
-  const response = NextResponse.redirect(new URL(returnTo.startsWith("/") && !returnTo.startsWith("//") ? returnTo : "/", request.url));
+  const destination = new URL(returnTo.startsWith("/") && !returnTo.startsWith("//") ? returnTo : "/", request.url);
+  destination.searchParams.set("onboarding", "1");
+  const response = NextResponse.redirect(destination);
   response.cookies.set(GOOGLE_SESSION_COOKIE, session, { httpOnly: true, sameSite: "lax", secure: request.nextUrl.protocol === "https:", path: "/", maxAge: 60 * 60 * 24 * 14 });
   response.cookies.delete("hongseong_google_state");
   response.cookies.delete("hongseong_auth_return");
