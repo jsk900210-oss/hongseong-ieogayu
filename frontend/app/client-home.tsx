@@ -341,7 +341,7 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
             <p>홍성의 유휴공간을 빌려 머무름과 모임이 시작돼요.<br/>혼자 온 여행자도 금세 로컬 친구가 됩니다.</p>
             <div className="space-flow" aria-label="홍성메이트 공간 운영 방식"><b>유휴공간 대여</b><span>→</span><b>로컬 체험</b><span>→</span><b>이웃 Join</b></div>
             <div className="hero-actions">
-              <button className="primary" onClick={() => move("join")}>Join 시작하기 →</button>
+              <button className="primary" onClick={() => user ? move("join") : window.location.assign("/api/auth/participant?return_to=/")}>{user ? "Join 시작하기 →" : "로그인하고 시작하기 →"}</button>
               <button className="hero-secondary" onClick={() => move("place")}>운영 공간 둘러보기</button>
               <a className="hero-secondary tide-button" href="https://www.khoa.go.kr/swtc" target="_blank" rel="noreferrer">물때표 보기 ↗</a>
             </div>
