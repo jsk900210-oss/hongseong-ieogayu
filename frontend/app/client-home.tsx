@@ -119,7 +119,9 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
       .then((response) => response.ok ? response.json() : null)
       .then((result: { profile?: { memberType?: "master" | "friends" | "general"; cohortCode?: string; stayPeriod?: string; stayArea?: string; interests?: string; profileVisibility?: string; activityScore?: number; lastActiveAt?: string | null; onboardingCompletedAt?: string | null } } | null) => {
         const profile = result?.profile;
-        if (!profile?.onboardingCompletedAt) setShowOnboarding(true);
+        const shouldStartOnboarding = new URLSearchParams(window.location.search).get("onboarding") === "1";
+        if (!profile?.onboardingCompletedAt && shouldStartOnboarding) setShowOnboarding(true);
+        if (shouldStartOnboarding) window.history.replaceState({}, "", window.location.pathname);
         if (profile) setOnboardingDraft({
           memberType: profile.memberType ?? "",
           masterCode: "",

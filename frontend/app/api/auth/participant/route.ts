@@ -12,7 +12,9 @@ export async function GET(request: Request) {
   });
   const returnTo = url.searchParams.get("return_to");
   const destination = returnTo?.startsWith("/") && !returnTo.startsWith("//") ? returnTo : "/";
-  const response = NextResponse.redirect(new URL(destination, url));
+  const nextUrl = new URL(destination, url);
+  nextUrl.searchParams.set("onboarding", "1");
+  const response = NextResponse.redirect(nextUrl);
   response.cookies.set(GOOGLE_SESSION_COOKIE, session, {
     httpOnly: true,
     sameSite: "lax",
