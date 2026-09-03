@@ -33,9 +33,9 @@ const PLACES = [
 
 const HONGSEONG_BOUNDS = { west: 126.426, east: 126.773, south: 36.458, north: 36.673 };
 const SPECIAL_ZONES = [
-  { id: "startup", name: "홍고통 로컬창업 생활권", shortName: "로컬창업", color: "burgundy", hex: "#8d463a", lat: 36.590, lon: 126.660, radius: 2200 },
-  { id: "organic", name: "홍동 유기농 공동체 생활권", shortName: "유기농 공동체", color: "green", hex: "#3d8157", lat: 36.556, lon: 126.687, radius: 3000 },
-  { id: "marine", name: "남당항 해양관광 생활권", shortName: "해양관광", color: "blue", hex: "#3688a7", lat: 36.538, lon: 126.472, radius: 2800 },
+  { id: "startup", name: "홍고통 로컬창업 생활권", shortName: "로컬창업", color: "burgundy", hex: "#8d463a", lat: 36.590, lon: 126.660, radius: 2200, detail: "청년 창업과 로컬 프로젝트가 모이는 홍성읍 생활권이에요.", highlight: "청년마을 · 로컬 창업 · 생활문화" },
+  { id: "organic", name: "홍동 유기농 공동체 생활권", shortName: "유기농 공동체", color: "green", hex: "#3d8157", lat: 36.556, lon: 126.687, radius: 3000, detail: "농사와 배움, 공동체의 일상을 가까이에서 만나는 농촌 생활권이에요.", highlight: "청년 농부 · 유기농업 · 농촌 체험" },
+  { id: "marine", name: "남당항 해양관광 생활권", shortName: "해양관광", color: "blue", hex: "#3688a7", lat: 36.538, lon: 126.472, radius: 2800, detail: "바다 풍경과 제철 먹거리, 해안 산책을 함께 즐기는 서해안 생활권이에요.", highlight: "대하 · 새조개 · 노을 산책" },
 ] as const;
 const AREA_GUIDES = [
   { name: "서부 해안권", detail: "궁리 · 속동 · 남당항 · 죽도", lat: 36.56, lon: 126.48, color: "#3688a7" },
@@ -190,6 +190,7 @@ function HongseongMap({ userLocation, items = PLACES, onSelect }: { userLocation
 
       SPECIAL_ZONES.forEach((zone) => {
         L.circle([zone.lat, zone.lon], { radius: zone.radius, color: zone.hex, weight: 2, dashArray: "7 6", fillColor: zone.hex, fillOpacity: .18 })
+          .on("click", () => onSelect?.(`area:${zone.id}`))
           .addTo(map!);
       });
 
@@ -222,9 +223,13 @@ function HongseongMap({ userLocation, items = PLACES, onSelect }: { userLocation
 
 function CategoryMapPanel({ view }: { view: DiscoveryView }) {
   const items = useMemo(() => categoryItems(view), [view]);
-  const [selectedName, setSelectedName] = useState<string | null>(null);
-  useEffect(() => setSelectedName(null), [view]);
-  return <div className="map-category-panel"><p className="category-filter-note"><b>{CATEGORY_LABELS[view]}</b>{CATEGORY_DESCRIPTIONS[view]}</p><div className="map-panel"><div className="real-map gps-map gps-active"><HongseongMap userLocation={HONGSEONG_CENTER} items={items} onSelect={setSelectedName} /></div><aside className="result-list ranked-place-list"><div className="result-head"><b>{CATEGORY_LABELS[view]}</b><span>{selectedName ? `${items.findIndex((item) => item.name === selectedName) + 1}번 장소 선택됨` : view === "festivals" ? "가까운 일정순 · 2026.09.02 확인" : "리뷰·추천순"}</span></div><div className="ranked-place-scroll">{items.length ? items.map((item, index) => { const festival = view === "festivals" ? item as FestivalPoint : null; const state = festival ? festivalState(festival) : null; return <button key={item.name} className={`${item.name === selectedName ? "selected-place" : ""}${state ? ` festival-row festival-${state}` : ""}`} onClick={() => setSelectedName(item.name)}><span className="rank-number">{index + 1}</span><span className="place-icon mint">{item.icon}</span><span>{festival && <span className={`festival-state ${state}`}>{state === "ongoing" ? "진행중" : state === "upcoming" ? "진행예정" : state === "ended" ? "일정종료" : "일정 미정"}</span>}<small>{item.category}</small><b>{item.name}</b><p>{festival ? festivalDateLabel(festival) : view === "recommended" ? "메이트가 다시 가고 싶은 생활 장소" : "지도에서 위치를 확인하세요"}</p></span></button>; }) : <div className="empty-filter-result"><span>🔎</span><b>검수 완료된 장소를 준비 중이에요</b><p>메이트 추천과 운영 여부 검수가 완료되면 지도에 표시됩니다.</p></div>}</div></aside></div></div>;
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  useEffect(() => setSelectedKey(null), [view]);
+  const selectedPlace = items.find((item) => item.name === selectedKey);
+  const selectedZone = SPECIAL_ZONES.find((zone) => `area:${zone.id}` === selectedKey);
+  const selectedIndex = items.findIndex((item) => item.name === selectedKey);
+  const mapLink = selectedPlace ? `https://map.naver.com/p/search/${encodeURIComponent(selectedPlace.name)}` : selectedZone ? `https://map.naver.com/p/search/${encodeURIComponent(selectedZone.name)}` : "#";
+  return <div className="map-category-panel"><p className="category-filter-note"><b>{CATEGORY_LABELS[view]}</b>{CATEGORY_DESCRIPTIONS[view]}<i>지도 구역이나 장소를 눌러 자세히 보세요</i></p><div className="map-panel"><div className="real-map gps-map gps-active"><HongseongMap userLocation={HONGSEONG_CENTER} items={items} onSelect={setSelectedKey} /></div><aside className="result-list ranked-place-list"><div className="result-head"><b>{CATEGORY_LABELS[view]}</b><span>{selectedIndex >= 0 ? `${selectedIndex + 1}번 장소 선택됨` : selectedZone ? "생활권 안내" : view === "festivals" ? "가까운 일정순 · 2026.09.02 확인" : "리뷰·추천순"}</span></div><div className="ranked-place-scroll">{items.length ? items.map((item, index) => { const festival = view === "festivals" ? item as FestivalPoint : null; const state = festival ? festivalState(festival) : null; return <button key={item.name} className={`${item.name === selectedKey ? "selected-place" : ""}${state ? ` festival-row festival-${state}` : ""}`} onClick={() => setSelectedKey(item.name)}><span className="rank-number">{index + 1}</span><span className="place-icon mint">{item.icon}</span><span>{festival && <span className={`festival-state ${state}`}>{state === "ongoing" ? "진행중" : state === "upcoming" ? "진행예정" : state === "ended" ? "일정종료" : "일정 미정"}</span>}<small>{item.category}</small><b>{item.name}</b><p>{festival ? festivalDateLabel(festival) : view === "recommended" ? "메이트가 다시 가고 싶은 생활 장소" : "지도에서 위치를 확인하세요"}</p></span></button>; }) : <div className="empty-filter-result"><span>🔎</span><b>검수 완료된 장소를 준비 중이에요</b><p>메이트 추천과 운영 여부 검수가 완료되면 지도에 표시됩니다.</p></div>}</div></aside></div>{(selectedPlace || selectedZone) && <div className="modal-backdrop" role="presentation" onMouseDown={() => setSelectedKey(null)}><section className="place-detail-modal" role="dialog" aria-modal="true" aria-labelledby="map-place-title" onMouseDown={(event) => event.stopPropagation()}><button className="modal-close" type="button" aria-label="닫기" onClick={() => setSelectedKey(null)}>×</button><div className="place-detail-emoji">{selectedPlace?.icon ?? "🧭"}</div><div className="place-detail-heading"><span>{selectedZone ? "홍성 특화생활권" : selectedPlace?.category}</span><h2 id="map-place-title">{selectedPlace?.name ?? selectedZone?.name}</h2></div><p>{selectedZone?.detail ?? `${selectedPlace?.name}의 위치와 주변 정보를 지도에서 확인해 보세요.`}</p><dl><div><dt>주요 키워드</dt><dd>{selectedZone?.highlight ?? selectedPlace?.category}</dd></div><div><dt>지도 위치</dt><dd>{selectedZone ? "생활권 중심 기준" : "상세 위치 확인 가능"}</dd></div></dl><div className="place-detail-actions"><a className="primary" href={mapLink} target="_blank" rel="noreferrer">지도에서 길찾기 ↗</a><button type="button" onClick={() => setSelectedKey(null)}>목록으로 돌아가기</button></div><small className="place-detail-note">장소 운영 시간과 이용 가능 여부는 방문 전 다시 확인해 주세요.</small></section></div>}</div>;
 }
 
 function CampingGuide() {
