@@ -84,6 +84,9 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
   const [sendingMessage, setSendingMessage] = useState(false);
   const [toast, setToast] = useState("");
   const [selectedFriend, setSelectedFriend] = useState<(IeumiFriend & { line: string }) | null>(null);
+  const [showFriendLayoutControls, setShowFriendLayoutControls] = useState(false);
+  const [friendLayout, setFriendLayout] = useState({ artHeight: 174, buttonTop: 10, buttonRight: 10 });
+  const [friendLayoutReady, setFriendLayoutReady] = useState(false);
   const [askQuestion, setAskQuestion] = useState("");
   const [askLoading, setAskLoading] = useState(false);
   const [askResponse, setAskResponse] = useState<AskResponse | null>(null);
@@ -113,6 +116,19 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
     const timer = window.setTimeout(() => setToast(""), 3500);
     return () => window.clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    const saved = window.localStorage.getItem("hongseong-friends-layout");
+    if (saved) try {
+      const layout = JSON.parse(saved);
+      if (typeof layout.artHeight === "number" && typeof layout.buttonTop === "number" && typeof layout.buttonRight === "number") setFriendLayout(layout);
+    } catch { window.localStorage.removeItem("hongseong-friends-layout"); }
+    setFriendLayoutReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (friendLayoutReady) window.localStorage.setItem("hongseong-friends-layout", JSON.stringify(friendLayout));
+  }, [friendLayout, friendLayoutReady]);
 
   useEffect(() => {
     if (!user) return;
@@ -365,12 +381,14 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
           </div>
           <button className="stay-purpose-link" type="button" onClick={() => move("place")}>운영 공간과 주변 살펴보기 →</button>
         </section>
-        <section className="friends-intro shell" aria-labelledby="friends-title">
-          <div className="friends-copy"><span className="mini-label">IEUMI FRIENDS · RECIPE</span><h2 id="friends-title">홍성 친구들의<br/>다양한 레시피 공유</h2><p>홍성의 바다와 밭, 시장에서 만난 재료로 친구들이 쉬운 한 끼 레시피를 나눠요.</p></div>
+        <section className="friends-intro shell" aria-labelledby="friends-title" style={{ "--friend-art-height": `${friendLayout.artHeight}px`, "--recipe-cta-top": `${friendLayout.buttonTop}px`, "--recipe-cta-right": `${friendLayout.buttonRight}px` } as React.CSSProperties}>
+          <div className="friends-copy"><span className="mini-label">IEUMI FRIENDS · RECIPE</span><h2 id="friends-title">홍성 친구들의 다양한 레시피 공유</h2><p>홍성의 바다와 밭, 시장에서 만난 재료로 친구들이 쉬운 한 끼 레시피를 나눠요.</p></div>
           <div className="friends-art" aria-label="한결이와 이음이 프렌즈 캐릭터">
             <button className="recipe-cta" type="button" onClick={() => move("recipe")}>홍성 재료 만나러 가기</button>
             {IEUMI_FRIENDS.map((friend) => <button key={friend.id} type="button" className={`friend-3d friend-${friend.id}${selectedFriend?.id === friend.id ? " selected" : ""}`} onClick={() => setSelectedFriend({ ...friend, line: friend.lines[Math.floor(Math.random() * friend.lines.length)] })} aria-label={`${friend.name} 소개 보기`}><img src={friend.image} alt="" />{selectedFriend?.id === friend.id && <span className="friend-speech" role="status"><b>{friend.name}</b><span>{selectedFriend.line}</span></span>}</button>)}
           </div>
+          {user && <button className="friend-layout-toggle" type="button" onClick={() => setShowFriendLayoutControls((open) => !open)}>{showFriendLayoutControls ? "배치 조정 닫기" : "배치 조정"}</button>}
+          {showFriendLayoutControls && user && <aside className="friend-layout-controls" aria-label="레시피 친구 영역 배치 조정"><b>레시피 친구 영역 배치</b><label>캐릭터 영역 높이 <input type="range" min="150" max="250" value={friendLayout.artHeight} onChange={(event) => setFriendLayout({ ...friendLayout, artHeight: Number(event.target.value) })} /><span>{friendLayout.artHeight}px</span></label><label>버튼 위 여백 <input type="range" min="0" max="70" value={friendLayout.buttonTop} onChange={(event) => setFriendLayout({ ...friendLayout, buttonTop: Number(event.target.value) })} /><span>{friendLayout.buttonTop}px</span></label><label>버튼 오른쪽 여백 <input type="range" min="0" max="70" value={friendLayout.buttonRight} onChange={(event) => setFriendLayout({ ...friendLayout, buttonRight: Number(event.target.value) })} /><span>{friendLayout.buttonRight}px</span></label><button type="button" onClick={() => setFriendLayout({ artHeight: 174, buttonTop: 10, buttonRight: 10 })}>기본 배치로 되돌리기</button><small>이 브라우저에 자동 저장됩니다.</small></aside>}
         </section>
         <section className="join-preview"><div className="shell"><div className="section-heading light"><div><span className="mini-label">JOIN · READY</span><h2>{joins.length > 0 ? "지금 참여할 수 있는 Join" : "첫 Join을 기다리고 있어요"}</h2><p>{joins.length > 0 ? `가장 가까운 일정부터 ${Math.min(joins.length, 3)}개를 확인해 보세요.` : "계정으로 로그인한 뒤 새로운 Join을 만들어보세요."}</p></div><button onClick={() => move("join")}>{joins.length > 0 ? "전체 Join 보기 →" : "Join 만들기 →"}</button></div>{joins.length > 0 && <div className="join-grid">{scheduledJoins.slice(0, 3).map((item) => <JoinCard key={item.id} item={item} joined={joined.includes(item.id)} onJoin={() => toggleJoin(item)} onDelete={() => deleteJoin(item.id)} onChat={() => openChat(item)} />)}</div>}</div></section>
       </>}
