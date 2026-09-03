@@ -336,12 +336,13 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
       {tab === "home" && <>
         <section className="hero shell">
           <div className="hero-copy">
-            <span className="eyebrow">홍성, 이어가유 · 구옥 스테이</span>
-            <h1>홍성에서<br/><em>함께할 순간</em>을 담아요</h1>
-            <p>혼자 온 여행자도 금세 친구가 되는 곳.<br/>홍성에 있는 로컬 친구들을 자유롭게 만나보세요.</p>
+            <span className="eyebrow">홍성, 이어가유 · 유휴공간 스테이</span>
+            <h1>비어 있던 공간에<br/><em>함께할 순간</em>을 담아요</h1>
+            <p>홍성의 유휴공간을 빌려 머무름과 모임이 시작돼요.<br/>혼자 온 여행자도 금세 로컬 친구가 됩니다.</p>
+            <div className="space-flow" aria-label="홍성메이트 공간 운영 방식"><b>유휴공간 대여</b><span>→</span><b>로컬 체험</b><span>→</span><b>이웃 Join</b></div>
             <div className="hero-actions">
               <button className="primary" onClick={() => move("join")}>Join 시작하기 →</button>
-              <button className="hero-secondary" onClick={() => move("place")}>근처 둘러보기</button>
+              <button className="hero-secondary" onClick={() => move("place")}>운영 공간 둘러보기</button>
               <a className="hero-secondary tide-button" href="https://www.khoa.go.kr/swtc" target="_blank" rel="noreferrer">물때표 보기 ↗</a>
             </div>
           </div>
