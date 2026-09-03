@@ -26,7 +26,8 @@ const weatherLabel = (code: number) => {
 const weatherEffect = (code: number, wind = 0) => {
   if ((code >= 71 && code <= 77) || (code >= 85 && code <= 86)) return "snow";
   if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82) || code >= 95) return "rain";
-  if (wind >= 8) return "wind";
+  // 평범한 바람은 수치로만 안내하고, 강풍일 때만 아주 옅은 움직임을 보여준다.
+  if (wind >= 20) return "wind";
   if (code >= 1 && code <= 48) return "cloudy";
   return "clear";
 };
