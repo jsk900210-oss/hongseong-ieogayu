@@ -1,12 +1,8 @@
 import { NextResponse } from "next/server";
 import { createGoogleSession, GOOGLE_SESSION_COOKIE } from "../../../google-auth";
 
-const isLocalHost = (hostname: string) => hostname === "localhost" || hostname === "127.0.0.1";
-
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  if (!isLocalHost(url.hostname)) return new NextResponse("Not found", { status: 404 });
-
   const session = await createGoogleSession({
     id: "demo:hongseong-friends",
     email: "demo@hongseongmate.local",
@@ -19,7 +15,7 @@ export async function GET(request: Request) {
   response.cookies.set(GOOGLE_SESSION_COOKIE, session, {
     httpOnly: true,
     sameSite: "lax",
-    secure: false,
+    secure: url.protocol === "https:",
     path: "/",
     maxAge: 60 * 60 * 8,
   });
