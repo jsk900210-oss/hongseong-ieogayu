@@ -1,17 +1,14 @@
 import { NextResponse } from "next/server";
 import { createGoogleSession, GOOGLE_SESSION_COOKIE } from "../../../google-auth";
 
-const isLocalHost = (hostname: string) => hostname === "localhost" || hostname === "127.0.0.1";
-
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  if (!isLocalHost(url.hostname)) return new NextResponse("Not found", { status: 404 });
-
+  const participantId = crypto.randomUUID();
   const session = await createGoogleSession({
-    id: "demo:hongseong-friends",
-    email: "demo@hongseongmate.local",
-    displayName: "홍성프렌즈 체험",
-    fullName: "홍성프렌즈 체험",
+    id: `participant:${participantId}`,
+    email: `${participantId}@participant.hongseongmate.local`,
+    displayName: "새 참가자",
+    fullName: null,
   });
   const returnTo = url.searchParams.get("return_to");
   const destination = returnTo?.startsWith("/") && !returnTo.startsWith("//") ? returnTo : "/";
@@ -19,9 +16,9 @@ export async function GET(request: Request) {
   response.cookies.set(GOOGLE_SESSION_COOKIE, session, {
     httpOnly: true,
     sameSite: "lax",
-    secure: false,
+    secure: url.protocol === "https:",
     path: "/",
-    maxAge: 60 * 60 * 8,
+    maxAge: 60 * 60 * 24 * 14,
   });
   return response;
 }
