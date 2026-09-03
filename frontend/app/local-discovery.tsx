@@ -5,7 +5,7 @@ import "leaflet/dist/leaflet.css";
 import markets from "../../data/hongseong/markets.json";
 import festivals from "../../data/hongseong/festivals.json";
 
-type DiscoveryView = "around" | "markets" | "festivals" | "reviews" | "recommended" | "hikes" | "camping";
+type DiscoveryView = "around" | "markets" | "festivals" | "reviews" | "recommended" | "hikes" | "camping" | "parking";
 type Review = { id: number; place: string; category: string; menu: string; rating: number; body: string; author: string; visitedAt: string };
 type UserLocation = { lat: number; lon: number };
 
@@ -57,6 +57,12 @@ const MARKET_POINTS = [
   { name: "광천전통시장", category: "4·9일 오일장", icon: "🏮", lat: 36.5006767661, lon: 126.6249711176 },
   { name: "갈산전통시장", category: "3·8일 오일장", icon: "🏮", lat: 36.6028, lon: 126.5487 },
 ] as const;
+const PARKING_POINTS = [
+  { name: "홍성천 복개 공영주차장", category: "홍성읍 오관리 · 시장·읍성 인근", icon: "🅿️", lat: 36.6015, lon: 126.6658 },
+  { name: "오관2 공영주차장", category: "홍주읍성 · 홍성전통시장 인근", icon: "🅿️", lat: 36.6001, lon: 126.6615 },
+  { name: "홍성역세권 공영주차장", category: "홍성읍 고암리 · 홍성역 인근", icon: "🅿️", lat: 36.5997, lon: 126.6687 },
+  { name: "광천천 하상2공구 공영주차장", category: "광천읍 광천로 296 일대", icon: "🅿️", lat: 36.5007, lon: 126.6249 },
+] as const;
 type FestivalPoint = { name: string; category: string; icon: string; lat: number; lon: number; startDate: string | null; endDate: string | null };
 const FESTIVAL_POINTS: readonly FestivalPoint[] = [
   { name: "홍성 남당항 새조개축제", category: "남당항 일원", icon: "🐚", lat: 36.537983719, lon: 126.4710062376, startDate: "2026-01-17", endDate: "2026-04-30" },
@@ -81,7 +87,7 @@ const CAMPING_SPOTS = [
 ] as const;
 const REVIEW_POINTS: readonly { name: string; category: string; icon: string; lat: number; lon: number }[] = [];
 const LIFESTYLE_POINTS: readonly { name: string; category: string; icon: string; lat: number; lon: number }[] = [];
-const CATEGORY_LABELS: Record<DiscoveryView, string> = { around: "전체 장소", markets: "오일장", festivals: "축제", reviews: "메이트 추천 맛집", recommended: "메이트 추천 플레이스", hikes: "등산", camping: "캠핑" };
+const CATEGORY_LABELS: Record<DiscoveryView, string> = { around: "전체 장소", markets: "오일장", festivals: "축제", reviews: "메이트 추천 맛집", recommended: "메이트 추천 플레이스", hikes: "등산", camping: "캠핑", parking: "공영주차장" };
 const CATEGORY_DESCRIPTIONS: Record<DiscoveryView, string> = {
   around: "검수된 관광·생활·편의 장소 전체",
   markets: "장날과 위치가 확인된 전통시장",
@@ -90,6 +96,7 @@ const CATEGORY_DESCRIPTIONS: Record<DiscoveryView, string> = {
   recommended: "소품샵·미용실·공방 등 비음식 생활 이용 장소",
   hikes: "등산로와 출발 지점이 확인된 산",
   camping: "공식 등록 캠핑장과 야영장 정보",
+  parking: "시장·역·관광지 인근 공영주차장 · 이용 전 운영 정보 확인",
 };
 const dateAtStartOfDay = (value: string) => new Date(`${value}T00:00:00+09:00`);
 const festivalState = (festival: FestivalPoint, today = new Date()) => {
@@ -109,7 +116,7 @@ const sortedFestivals = (today = new Date()) => [...FESTIVAL_POINTS].sort((a, b)
 const festivalDateLabel = (festival: FestivalPoint) => festival.startDate && festival.endDate
   ? `${festival.startDate.replaceAll("-", ".")} – ${festival.endDate.replaceAll("-", ".")}`
   : "2026년 일정 미정";
-const categoryItems = (view: DiscoveryView) => view === "markets" ? MARKET_POINTS : view === "festivals" ? sortedFestivals() : view === "reviews" ? REVIEW_POINTS : view === "hikes" ? HIKE_POINTS : view === "recommended" ? LIFESTYLE_POINTS : PLACES;
+const categoryItems = (view: DiscoveryView) => view === "markets" ? MARKET_POINTS : view === "festivals" ? sortedFestivals() : view === "reviews" ? REVIEW_POINTS : view === "hikes" ? HIKE_POINTS : view === "recommended" ? LIFESTYLE_POINTS : view === "parking" ? PARKING_POINTS : PLACES;
 
 const seedReviews: Review[] = [];
 
@@ -263,7 +270,7 @@ export default function LocalDiscovery({ displayName, signedIn, onRequireLogin }
     <h1>오늘의 홍성을 발견해요</h1>
     <p className="lead">장날과 축제 소식을 챙기고, 참가자가 직접 찾은 맛을 함께 기록해요.</p>
     <div className="discovery-tabs" role="tablist" aria-label="발견 메뉴">
-      {([['around','전체 장소','🗺️'],['markets','오일장','🏮'],['festivals','축제','🎉'],['reviews','메이트 추천 맛집','🥣'],['recommended','메이트 추천 플레이스','💚'],['hikes','등산','🥾'],['camping','캠핑','⛺']] as const).map(([key,label,icon]) =>
+      {([['around','전체 장소','🗺️'],['markets','오일장','🏮'],['festivals','축제','🎉'],['parking','공영주차장','🅿️'],['reviews','메이트 추천 맛집','🥣'],['recommended','메이트 추천 플레이스','💚'],['hikes','등산','🥾'],['camping','캠핑','⛺']] as const).map(([key,label,icon]) =>
         <button key={key} role="tab" aria-selected={view === key} className={view === key ? "active" : ""} onClick={() => setView(key)}><span>{icon}</span>{label}</button>)}
     </div>
     {view === "camping" ? <CampingGuide /> : <CategoryMapPanel view={view} />}
