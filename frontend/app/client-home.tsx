@@ -352,6 +352,14 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
           : <a className="topbar-login" href="/api/auth/google?return_to=/"><span>◎</span> Google 로그인</a>}
       </header>
 
+      <nav className="quick-actions" aria-label="빠른 기능 이동">
+        <button type="button" onClick={() => move("home")}><span>🏠</span>홈</button>
+        <button type="button" onClick={() => move("place")}><span>🗺️</span>홍성 둘러보기</button>
+        <button type="button" onClick={() => setShowMiniMarket(true)}><span>🧺</span>미니마켓</button>
+        <button type="button" className="quick-join" onClick={() => user ? move("join") : window.location.assign("/api/auth/google?return_to=/")}><span>＋</span>Join 시작하기</button>
+        <button type="button" onClick={() => move("recipe")}><span>🍳</span>레시피</button>
+      </nav>
+
       {tab === "home" && <>
         <section className="hero shell">
           <div className="hero-copy">
