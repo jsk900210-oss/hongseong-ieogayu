@@ -33,10 +33,31 @@ const IEUMI_SOURCES = {
   medicalCenter: { label: "홍성의료원 공식 안내", url: "https://hsmc.or.kr/language/helth/hong_01_04.php" },
   healthFinder: { label: "심평원 병원·약국 찾기", url: "https://www.hira.or.kr/main.do?target=external" },
   emergencyFinder: { label: "응급의료포털 E-Gen", url: "https://www.e-gen.or.kr/egen/main.do" },
+  emergencyCare: { label: "보건복지부 홍성의료원 안내", url: "https://mohw.go.kr/board.es?act=view&bid=0027&list_no=1485815&mid=a10503000000" },
   police: { label: "홍성경찰서 공식 홈페이지", url: "https://www.cnpolice.go.kr/SEO/HS/index.php" },
   fire: { label: "충청남도 소방기관 안내", url: "https://www.chungnam.go.kr/cnportal/main/contents.do?menuNo=500984" },
   fireDirectory: { label: "충남 소방서 주소 현황", url: "https://chnet4u.org/?page_id=3973" },
 };
+
+function hongseongMedicalHours(question: string): Omit<IeumiMessage, "id" | "role"> {
+  const asksTomorrow = /내일/.test(question);
+  const target = new Date();
+  if (asksTomorrow) target.setDate(target.getDate() + 1);
+  const day = Number(new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Seoul", weekday: "short" }).format(target) === "Sun" ? 0
+    : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Seoul", weekday: "short" }).format(target)) + 1);
+  const dateLabel = new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", month: "long", day: "numeric", weekday: "long" }).format(target);
+  const when = asksTomorrow ? `내일 ${dateLabel}` : `오늘 ${dateLabel}`;
+  const sources = [IEUMI_SOURCES.medicalCenter, IEUMI_SOURCES.healthFinder, IEUMI_SOURCES.emergencyCare];
+
+  if (day === 0 || day === 6) return {
+    text: `${when}은 주말이라 일반 외래는 휴진으로 안내돼 있어유. 응급실은 24시간 운영하지만, 방문 전 홍성의료원 대표전화 041-630-6114 또는 119로 상황에 맞는 진료 가능 여부를 확인해 주세유.`,
+    sources,
+  };
+  return {
+    text: `${when} 홍성의료원 일반 외래는 08:30부터 17:30까지로 안내돼 있어유. 진료과별 일정과 당일 접수 마감은 더 이를 수 있으니 대표전화 041-630-6114로 먼저 확인해 주세유. 응급실은 24시간 운영해유.`,
+    sources,
+  };
+}
 
 const ONBOARDING_INTERESTS = ["맛집 탐방", "로컬 창업", "농사·텃밭", "산책·등산", "사진·기록", "함께 요리", "반려동물", "문화·축제"];
 export default function ClientHome({ user }: { user: GoogleUser | null }) {
@@ -286,11 +307,18 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
     setIeumiMessages((current) => [...current, { id: Date.now(), role: "user", text: question }]);
     setAskQuestion("");
     setAskLoading(true);
-    const normalized = question.replaceAll(" ", "");
+    const normalized = question.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
+    const recentQuestions = ieumiMessages.slice(-4).filter((message) => message.role === "user").map((message) => message.text).join(" ");
+    const medicalCenterContext = /(홍성의료원|홍성병원|의료원)/.test(normalized)
+      || (/(몇시|시간|오늘|내일|주말|토요일|일요일|문열|문닫|진료|접수|예약|전화|주소|어디)/.test(normalized) && /(홍성의료원|홍성병원|의료원)/.test(recentQuestions));
     let reply: Omit<IeumiMessage, "id" | "role">;
-    if (/(응급|위급|사고|불이야|화재)/.test(normalized)) reply = { text: "지금 위급하면 이 채팅보다 먼저 119(구급·화재) 또는 112(경찰)로 전화해유. 문을 연 병원·약국과 응급실은 E-Gen에서 현재 위치를 기준으로 확인할 수 있어유.", sources: [IEUMI_SOURCES.emergencyFinder] };
+    if (medicalCenterContext && /(몇시|시간|오늘|내일|주말|토요일|일요일|문열|문닫|마감|진료해|진료야|운영)/.test(normalized)) reply = hongseongMedicalHours(normalized);
+    else if (medicalCenterContext && /(예약|접수|전화|연락처|번호)/.test(normalized)) reply = { text: "홍성의료원 진료·예약·접수 문의는 대표전화 041-630-6114로 확인해유. 진료과와 의료진에 따라 일정이 달라질 수 있어 방문 전에 전화 확인이 가장 정확해유.", sources: [IEUMI_SOURCES.medicalCenter] };
+    else if (medicalCenterContext && /(어디|위치|주소|가는길|찾아가)/.test(normalized)) reply = { text: "홍성의료원은 충남 홍성군 홍성읍 조양로 224에 있어유. 홍성역과 홍성종합터미널에서 가까운 편이고, 정확한 이동 경로는 공식 오시는 길에서 확인해유.", sources: [IEUMI_SOURCES.medicalCenter] };
+    else if (medicalCenterContext && /(진료과|무슨과|어떤과|과가있)/.test(normalized)) reply = { text: "홍성의료원은 내과·외과·정형외과·소아청소년과·산부인과·응급의학과 등을 포함한 여러 진료과를 운영해유. 오늘 진료하는 과와 의료진은 대표전화 041-630-6114로 확인해 주세유.", sources: [IEUMI_SOURCES.medicalCenter, IEUMI_SOURCES.emergencyCare] };
+    else if (/(응급|위급|사고|불이야|화재)/.test(normalized)) reply = { text: "지금 위급하면 이 채팅보다 먼저 119(구급·화재) 또는 112(경찰)로 전화해유. 문을 연 병원·약국과 응급실은 E-Gen에서 현재 위치를 기준으로 확인할 수 있어유.", sources: [IEUMI_SOURCES.emergencyFinder] };
     else if (/(약국|약사|약사러|약살)/.test(normalized)) reply = { text: "현재 문을 연 가까운 약국은 운영시간이 바뀔 수 있어 고정 목록 대신 심평원 또는 E-Gen의 공식 조회를 이용해유. 방문 전에는 표시된 전화번호로 한 번 더 확인해 주세유.", sources: [IEUMI_SOURCES.healthFinder, IEUMI_SOURCES.emergencyFinder] };
-    else if (/(병원|의원|진료|의료원|응급실)/.test(normalized)) reply = { text: "홍성의료원은 충남 홍성군 홍성읍 조양로 224에 있고 대표전화는 041-630-6114예유. 진료 가능 여부와 문을 연 가까운 의료기관은 공식 조회에서 확인해유.", sources: [IEUMI_SOURCES.medicalCenter, IEUMI_SOURCES.healthFinder, IEUMI_SOURCES.emergencyFinder] };
+    else if (/(병원|의원|진료|의료원|응급실)/.test(normalized)) reply = { text: "홍성의료원은 충남 홍성군 홍성읍 조양로 224에 있고 대표전화는 041-630-6114예유. 운영시간, 예약, 진료과처럼 궁금한 내용을 문장으로 물어봐도 답할 수 있어유. 현재 진료 가능 여부는 공식 조회에서 확인해유.", sources: [IEUMI_SOURCES.medicalCenter, IEUMI_SOURCES.healthFinder, IEUMI_SOURCES.emergencyFinder] };
     else if (/(경찰|경찰서|파출소|지구대|112)/.test(normalized)) reply = { text: "홍성군 관할 홍성경찰서는 충남 홍성군 홍성읍 충서로 1254에 있어유. 긴급 신고는 112, 일반 경찰 민원은 182를 이용해유. 숙소 주소가 확정되지 않아 가장 가까운 지구대·파출소는 아직 거리순으로 안내할 수 없어유.", sources: [IEUMI_SOURCES.police] };
     else if (/(소방|소방서|119|구급대)/.test(normalized)) reply = { text: "홍성소방서는 충남 홍성군 홍성읍 충절로 741에 있어유. 화재·구조·구급은 119로 바로 신고해유. 숙소 주소가 확정되면 가까운 119안전센터를 거리 기준으로 연결할게유.", sources: [IEUMI_SOURCES.fire, IEUMI_SOURCES.fireDirectory] };
     else if (/(공공기관|안전시설|생활안전|가까운기관)/.test(normalized)) reply = { text: "홍성의료원, 홍성경찰서, 홍성소방서와 공식 병원·약국 조회를 안내할 수 있어유. 숙소 위치가 확정되기 전에는 가까운 순서를 임의로 만들지 않아유. 위급하면 119 또는 112로 먼저 연락해유.", sources: [IEUMI_SOURCES.healthFinder, IEUMI_SOURCES.police, IEUMI_SOURCES.fire] };
@@ -305,7 +333,8 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
     else if (/마켓|농산물|입고|장보기|나눔/.test(normalized)) reply = { text: "내일 들어올 농산물과 나눔물품은 마켓에서 미리 확인할 수 있어유.", actionLabel: "마켓 열기" };
     else if (/모임|조인|join|친구|함께/.test(normalized.toLowerCase())) reply = { text: "같이 밥 먹고 산책할 이웃을 찾는다면 Join을 둘러봐유.", action: "join", actionLabel: "Join 열기" };
     else if (/요리|레시피|먹는법|만들기/.test(normalized)) reply = { text: "홍성 재료로 만드는 쉬운 한 끼를 레시피에서 소개하고 있어유.", action: "recipe", actionLabel: "레시피 열기" };
-    else reply = { text: "홍성의 숙소, 장소, 마켓, Join, 레시피와 병원·약국·경찰·소방 정보를 안내할 수 있어유. 궁금한 단어를 조금만 더 구체적으로 말해줘유." };
+    else if (/(몇시|운영시간|영업시간|문열|문닫)/.test(normalized)) reply = { text: "어느 장소의 운영시간을 찾는지 이름을 함께 알려줘유. 예를 들어 ‘오늘 홍성의료원 몇 시까지 진료해?’처럼 물어보면 날짜와 공식 출처를 함께 확인해 드려유." };
+    else reply = { text: "홍성의 숙소, 장소, 마켓, Join, 레시피와 병원·약국·경찰·소방 정보를 안내할 수 있어유. ‘홍성의료원 오늘 몇 시까지 해?’, ‘주말에도 진료해?’, ‘주소가 어디야?’처럼 편하게 문장으로 물어봐유." };
     window.setTimeout(() => {
       setIeumiMessages((current) => [...current, { id: Date.now() + 1, role: "ieumi", ...reply }]);
       setAskLoading(false);
@@ -393,7 +422,7 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
         {ieumiChatOpen && <section className="ieumi-chat" role="dialog" aria-modal="false" aria-label="이음이 홍성 안내 챗봇">
           <div className="ieumi-chat-head"><div><img src="/brand/ieumi.png" alt=""/><span><b>이음이</b><small>홍성 안내 친구</small></span></div><button type="button" onClick={() => setIeumiChatOpen(false)} aria-label="이음이 채팅 닫기">×</button></div>
           <div className="ieumi-chat-thread" aria-live="polite">{ieumiMessages.map((message) => <div key={message.id} className={`ieumi-message ${message.role}`}><p>{message.text}</p>{message.sources && <div className="ieumi-sources" aria-label="공식 출처">{message.sources.map((source) => <a key={source.url} href={source.url} target="_blank" rel="noreferrer">{source.label} ↗</a>)}</div>}{message.actionLabel && <button type="button" onClick={() => { if (message.action) move(message.action); else setShowMiniMarket(true); setIeumiChatOpen(false); }}>{message.actionLabel} →</button>}</div>)}{askLoading && <div className="ieumi-message ieumi typing"><span/><span/><span/></div>}</div>
-          <div className="ieumi-quick-asks">{["숙소는 어떤 곳이야?", "앱에서 뭘 할 수 있어?", "병원·약국 찾아줘", "공공기관 알려줘"].map((question) => <button key={question} type="button" onClick={() => setAskQuestion(question)}>{question}</button>)}</div>
+          <div className="ieumi-quick-asks">{["오늘 홍성의료원 몇 시까지 해?", "숙소는 어떤 곳이야?", "병원·약국 찾아줘", "공공기관 알려줘"].map((question) => <button key={question} type="button" onClick={() => setAskQuestion(question)}>{question}</button>)}</div>
           <form className="ieumi-composer" onSubmit={submitQuestion}><label htmlFor="ieumi-question">이음이에게 물어보기</label><div><input id="ieumi-question" value={askQuestion} onChange={(event) => setAskQuestion(event.target.value)} placeholder="예: 홍성에서 가볼 곳은?"/><button type="submit" disabled={askLoading || !askQuestion.trim()}>보내기</button></div></form>
         </section>}
         <button className="ieumi-pet" type="button" onClick={() => setIeumiChatOpen((open) => !open)} aria-expanded={ieumiChatOpen} aria-label={ieumiChatOpen ? "이음이 채팅 닫기" : "이음이에게 홍성 물어보기"}><span>물어봐유!</span><img src="/brand/ieumi.png" alt=""/></button>
