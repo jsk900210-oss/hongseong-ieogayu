@@ -342,9 +342,9 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
         </button>
         <nav className="desktop-nav">
           <button className={tab === "home" ? "active" : ""} onClick={() => move("home")}>홈</button>
-          <button className={tab === "place" ? "active" : ""} onClick={() => move("place")}>근처 발견</button><button className={tab === "recipe" ? "active" : ""} onClick={() => move("recipe")}>레시피</button>
+          <button className={tab === "place" ? "active" : ""} onClick={() => move("place")}>발견</button><button type="button" onClick={() => setShowMiniMarket(true)}>마켓</button>
           <button className={tab === "join" ? "active" : ""} onClick={() => move("join")}>Join</button>
-          <button className={tab === "messages" ? "active" : ""} onClick={() => move("messages")}>메시지함</button>
+          <button className={tab === "recipe" ? "active" : ""} onClick={() => move("recipe")}>레시피</button>
           <button className={tab === "profile" ? "active" : ""} onClick={() => move("profile")}>내 프로필</button>
         </nav>
         {user
@@ -352,29 +352,27 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
           : <a className="topbar-login" href="/api/auth/google?return_to=/"><span>◎</span> Google 로그인</a>}
       </header>
 
-      <nav className="quick-actions" aria-label="빠른 기능 이동">
-        <button type="button" onClick={() => move("home")}><span>🏠</span>홈</button>
-        <button type="button" onClick={() => move("place")}><span>🗺️</span>홍성 둘러보기</button>
-        <button type="button" onClick={() => setShowMiniMarket(true)}><span>🧺</span>미니마켓</button>
-        <button type="button" className="quick-join" onClick={() => user ? move("join") : window.location.assign("/api/auth/google?return_to=/")}><span>＋</span>Join 시작하기</button>
-        <button type="button" onClick={() => move("recipe")}><span>🍳</span>레시피</button>
-      </nav>
-
       {tab === "home" && <>
         <section className="hero shell">
           <div className="hero-copy">
             <span className="eyebrow">홍성, 이어가유 · 유휴공간 스테이</span>
             <h1>비어 있던 공간에<br/><em>함께할 순간</em>을 담아요</h1>
-            <p>홍성의 유휴공간을 빌려 머무름과 모임이 시작돼요.<br/>혼자 온 여행자도 금세 로컬 친구가 됩니다.</p>
+            <p>묵고, 함께 밥 먹고, 이웃이 되는 며칠.<br/>혼자 온 여행자도 금세 로컬 친구가 됩니다.</p>
             <div className="space-flow" aria-label="홍성메이트 공간 운영 방식"><b>유휴공간 대여</b><span>→</span><b>로컬 체험</b><span>→</span><b>이웃 Join</b></div>
             <div className="hero-actions">
-              <button className="primary" type="button" onClick={() => setShowMiniMarket(true)}>스테이 미니마켓 →</button>
-              <button className="primary" onClick={() => user ? move("join") : window.location.assign("/api/auth/google?return_to=/")}>{user ? "Join 시작하기 →" : "홍성 만나러 가기 →"}</button>
+              <button className="primary" type="button" onClick={() => document.getElementById("stay-purpose-title")?.scrollIntoView({ behavior: "smooth", block: "start" })}>홍성에서 지내보기 <span>→</span></button>
               <button className="hero-secondary" onClick={() => move("place")}>홍성 둘러보기</button>
-              <a className="hero-secondary tide-button" href="https://www.khoa.go.kr/swtc" target="_blank" rel="noreferrer">물때표 보기 ↗</a>
             </div>
           </div>
           <div className="hero-art hongseong-hero" role="img" aria-label="황금 들녘과 홍성 구옥 스테이 풍경"><HongseongWeather /></div>
+        </section>
+        <section className="today-shortcuts shell" aria-labelledby="today-shortcuts-title">
+          <div><span className="mini-label">TODAY IN HONGSEONG</span><h2 id="today-shortcuts-title">오늘의 바로가기</h2></div>
+          <div className="shortcut-grid">
+            <button type="button" onClick={() => setShowMiniMarket(true)}><span className="shortcut-icon market">🧺</span><b>내일 마켓 입고</b><small>농산물·나눔물품 미리보기</small><i>내일 입고</i></button>
+            <button type="button" onClick={() => move("place")}><span className="shortcut-icon event">📍</span><b>이번 주 홍성</b><small>오일장·축제·가볼 곳</small><i>둘러보기</i></button>
+            <a href="https://www.khoa.go.kr/swtc" target="_blank" rel="noreferrer"><span className="shortcut-icon tide">〰️</span><b>바다 시간 확인</b><small>남당항 물때표 보기</small><i>물때표 ↗</i></a>
+          </div>
         </section>
         <section className="stay-purpose shell" aria-labelledby="stay-purpose-title">
           <div className="stay-purpose-copy">
@@ -387,7 +385,7 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
             <article><span>🍳</span><b>생활비 아끼기</b><small>공용주방에서 직접 요리하며 머무름의 비용을 줄여요.</small></article>
             <article><span>🤝</span><b>지역과 이어지기</b><small>청년마을·청년 농부·이웃 Join으로 관계를 시작해요.</small></article>
           </div>
-          <button className="stay-purpose-link" type="button" onClick={() => move("place")}>운영 공간과 주변 살펴보기 →</button>
+          <button className="stay-purpose-link" type="button" onClick={() => move("place")}>스테이와 주변 살펴보기 →</button>
         </section>
         <section className="friends-intro shell" aria-labelledby="friends-title" style={{ "--friend-art-height": `${friendLayout.artHeight}px`, "--recipe-cta-top": `${friendLayout.buttonTop}px`, "--recipe-cta-right": `${friendLayout.buttonRight}px` } as React.CSSProperties}>
           <div className="friends-copy"><span className="mini-label">IEUMI FRIENDS · RECIPE</span><h2 id="friends-title">홍성 친구들의 다양한 레시피 공유</h2><p>홍성의 바다와 밭, 시장에서 만난 재료로 친구들이 쉬운 한 끼 레시피를 나눠요.</p></div>
@@ -418,7 +416,7 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
         <div className="keyword-panel" style={{marginTop: 24}}><div className="panel-title"><div><span className="mini-label">PARTICIPANT ACCOUNT</span><h2>{user ? "참가자 계정 연결 완료" : "참가자로 시작하기"}</h2></div><span className="test-badge">{user ? "참여 중" : "시작 전"}</span></div><p>{user ? "기수 인증 후 Join 생성·신청·방문 기록을 참가자 계정별로 관리합니다." : "Google 계정으로 로그인한 뒤 이용 유형과 관심사를 설정합니다."}</p>{user ? <a className="primary" href="/api/auth/logout">참여 종료하기</a> : <a className="primary google-login" href="/api/auth/google?return_to=/">◎ Google로 시작하기</a>}</div>
       </section>}
 
-      <nav className="mobile-nav"><button className={tab === "home" ? "active" : ""} onClick={()=>move("home")}><span>🏠</span>홈</button><button className={tab === "place" ? "active" : ""} onClick={()=>move("place")}><span>🗺️</span>발견</button><button className="join-fab" onClick={()=>move("join")}><span>＋</span>Join</button><button className={tab === "messages" ? "active" : ""} onClick={()=>move("messages")}><span>💬</span>메시지</button><button className={tab === "profile" ? "active" : ""} onClick={()=>move("profile")}><span>👤</span>프로필</button></nav>
+      <nav className="mobile-nav" aria-label="주요 메뉴"><button className={tab === "home" ? "active" : ""} onClick={()=>move("home")}><span>🏠</span>홈</button><button className={tab === "place" ? "active" : ""} onClick={()=>move("place")}><span>🗺️</span>발견</button><button className="market-tab" type="button" onClick={()=>setShowMiniMarket(true)}><span>🧺</span>마켓</button><button className="join-fab" onClick={()=>move("join")}><span>＋</span>Join</button><button className={tab === "profile" ? "active" : ""} onClick={()=>move("profile")}><span>👤</span>프로필</button></nav>
 
       {showMiniMarket && <div className="modal-backdrop" role="presentation" onMouseDown={() => setShowMiniMarket(false)}><section className="market-modal" role="dialog" aria-modal="true" aria-labelledby="market-title" onMouseDown={(event) => event.stopPropagation()}><button className="modal-close" type="button" aria-label="닫기" onClick={() => setShowMiniMarket(false)}>×</button><span className="mini-label">STAY MINI MARKET</span><h2 id="market-title">내일 입고될<br/>스테이 미니마켓</h2><p className="market-lead">스테이에 들어올 농산물과 나눔물품을 미리 확인하고, 입금 확인 뒤 다음 날 편하게 받아가세요.</p><div className="market-note">입고 수량과 최종 금액은 운영자 확인 후 확정됩니다.</div><div className="market-groups"><section><div className="market-section-title"><span>🥬</span><div><b>농산물</b><small>내일 입고 예정</small></div></div><ul><li><span>홍동 방울토마토 500g</span><b>수량 확인 중</b></li><li><span>홍성 햇감자 1kg</span><b>수량 확인 중</b></li><li><span>계절 나물 꾸러미</span><b>수량 확인 중</b></li></ul></section><section><div className="market-section-title"><span>🧺</span><div><b>나눔물품</b><small>스테이 이용자 우선</small></div></div><ul><li><span>공용주방 기본양념</span><b>무료 나눔</b></li><li><span>재사용 장바구니</span><b>무료 나눔</b></li><li><span>식재료 보관용기</span><b>수량 한정</b></li></ul></section></div><div className="market-flow" aria-label="스테이 미니마켓 수령 순서"><span><b>1</b>오늘 신청</span><i>→</i><span><b>2</b>입고·금액 확정</span><i>→</i><span><b>3</b>다음 날 입금 확인 후 수령</span></div><p className="market-footnote">시범 운영 중이며, 품목·수량은 당일 입고 상황에 따라 달라질 수 있어요.</p></section></div>}
       {creatingJoin && <div className="modal-backdrop" role="presentation" onMouseDown={() => setCreatingJoin(false)}><section className="join-modal" role="dialog" aria-modal="true" aria-labelledby="join-create-title" onMouseDown={(event) => event.stopPropagation()}><button className="modal-close" type="button" aria-label="닫기" onClick={() => setCreatingJoin(false)}>×</button><span className="mini-label">NEW JOIN</span><h2 id="join-create-title">새로운 Join 만들기</h2><p>함께하고 싶은 일정과 모집 내용을 알려주세요.</p><form onSubmit={saveJoin}><label>제목<input required maxLength={40} value={joinDraft.title} onChange={(event) => setJoinDraft({...joinDraft, title:event.target.value})} placeholder="예: 함께 오름 일몰 보러 가요" /></label><label>소개<textarea required maxLength={300} rows={4} value={joinDraft.description} onChange={(event) => setJoinDraft({...joinDraft, description:event.target.value})} placeholder="어떤 시간을 함께 보내고 싶은지 적어주세요" /></label><div className="form-grid"><label>장소<input required maxLength={60} value={joinDraft.location} onChange={(event) => setJoinDraft({...joinDraft, location:event.target.value})} placeholder="만나는 장소" /></label><label>주제<select value={joinDraft.keyword} onChange={(event) => setJoinDraft({...joinDraft, keyword:event.target.value})}><option>여행</option><option>맛집</option><option>산책</option><option>액티비티</option><option>기타</option></select></label><label>날짜<input required type="date" value={joinDraft.date} onChange={(event) => setJoinDraft({...joinDraft, date:event.target.value})} /></label><label>시간<input required type="time" value={joinDraft.time} onChange={(event) => setJoinDraft({...joinDraft, time:event.target.value})} /></label><label>모집 인원<input required type="number" min={2} max={20} value={joinDraft.max} onChange={(event) => setJoinDraft({...joinDraft, max:event.target.value})} /></label></div><button className="primary submit-join" type="submit" disabled={savingJoin}>{savingJoin ? "등록 중…" : "Join 등록하기"}</button></form></section></div>}
