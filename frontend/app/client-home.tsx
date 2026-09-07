@@ -24,27 +24,11 @@ type JoinItem = {
   canDelete?: boolean;
 };
 
-type AskResponse = {
-  query: string;
-  answer: string;
-  sources: Array<{
-    name: string;
-    category_norm: string;
-    distance_m: number;
-    solo_friendly: boolean | null;
-    document: string;
-  }>;
-};
-
 type ProfileMeta = { interests: string[]; activityScore: number; lastActiveAt: string | null; memberType: "master" | "friends" | "general" | "" };
 type JoinMessage = { id: number; body: string; createdAt: string; userId: string; displayName: string };
-type IeumiFriend = { id: string; name: string; image: string; eyebrow: string; lines: string[]; story: string };
+type IeumiMessage = { id: number; role: "ieumi" | "user"; text: string; action?: Tab; actionLabel?: string };
 
 const ONBOARDING_INTERESTS = ["맛집 탐방", "로컬 창업", "농사·텃밭", "산책·등산", "사진·기록", "함께 요리", "반려동물", "문화·축제"];
-const IEUMI_FRIENDS: IeumiFriend[] = [
-  { id: "ieumi", name: "이음이", image: "/brand/ieumi.png", eyebrow: "HONGSEONG · IEUMI", lines: ["홍성의 작은 일상을 함께 이어가유!", "오늘은 홍성에서 무엇을 만나볼까?", "좋은 재료로 따뜻한 한 끼를 나눠요."], story: "소복한 흙 위에 새싹이 자란 이음이는 홍성의 땅과 사람, 일상을 이어주는 친구예요." },
-];
-
 export default function ClientHome({ user }: { user: GoogleUser | null }) {
   const [tab, setTab] = useState<Tab>("home");
   const [displayName, setDisplayName] = useState(user?.displayName ?? "");
@@ -78,13 +62,12 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
   const [messageDraft, setMessageDraft] = useState("");
   const [sendingMessage, setSendingMessage] = useState(false);
   const [toast, setToast] = useState("");
-  const [selectedFriend, setSelectedFriend] = useState<(IeumiFriend & { line: string }) | null>(null);
-  const [showFriendLayoutControls, setShowFriendLayoutControls] = useState(false);
-  const [friendLayout, setFriendLayout] = useState({ artHeight: 174, buttonTop: 10, buttonRight: 10 });
-  const [friendLayoutReady, setFriendLayoutReady] = useState(false);
+  const [ieumiChatOpen, setIeumiChatOpen] = useState(false);
+  const [ieumiMessages, setIeumiMessages] = useState<IeumiMessage[]>([
+    { id: 1, role: "ieumi", text: "안녕! 홍성에서 무엇을 찾고 있어유? 장소, 마켓, 모임, 레시피를 함께 찾아볼게유." },
+  ]);
   const [askQuestion, setAskQuestion] = useState("");
   const [askLoading, setAskLoading] = useState(false);
-  const [askResponse, setAskResponse] = useState<AskResponse | null>(null);
   const keywords = ["전체", ...Array.from(new Set(joins.map((item) => item.keyword)))];
   const scheduledJoins = useMemo(() => [...joins].sort((a, b) => `${a.date}T${a.time}`.localeCompare(`${b.date}T${b.time}`)), [joins]);
   const visible = useMemo(
@@ -111,19 +94,6 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
     const timer = window.setTimeout(() => setToast(""), 3500);
     return () => window.clearTimeout(timer);
   }, []);
-
-  useEffect(() => {
-    const saved = window.localStorage.getItem("hongseong-friends-layout");
-    if (saved) try {
-      const layout = JSON.parse(saved);
-      if (typeof layout.artHeight === "number" && typeof layout.buttonTop === "number" && typeof layout.buttonRight === "number") setFriendLayout(layout);
-    } catch { window.localStorage.removeItem("hongseong-friends-layout"); }
-    setFriendLayoutReady(true);
-  }, []);
-
-  useEffect(() => {
-    if (friendLayoutReady) window.localStorage.setItem("hongseong-friends-layout", JSON.stringify(friendLayout));
-  }, [friendLayout, friendLayoutReady]);
 
   useEffect(() => {
     if (!user) return;
@@ -301,32 +271,23 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
 
   const submitQuestion = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!askQuestion.trim()) return;
-
+    const question = askQuestion.trim();
+    if (!question) return;
+    setIeumiMessages((current) => [...current, { id: Date.now(), role: "user", text: question }]);
+    setAskQuestion("");
     setAskLoading(true);
-    try {
-      const response = await fetch("http://localhost:8000/api/v1/ask", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ question: askQuestion }),
-      });
-
-      if (!response.ok) {
-        setToast("질문을 처리하지 못했어요.");
-        window.setTimeout(() => setToast(""), 2200);
-        setAskLoading(false);
-        return;
-      }
-
-      const result = (await response.json()) as AskResponse;
-      setAskResponse(result);
-      setAskQuestion("");
-    } catch {
-      setToast("질문을 처리하지 못했어요.");
-      window.setTimeout(() => setToast(""), 2200);
-    } finally {
+    const normalized = question.replaceAll(" ", "");
+    let reply: Omit<IeumiMessage, "id" | "role">;
+    if (/맛집|가볼|여행|축제|주차|캠핑|장소/.test(normalized)) reply = { text: "발견에서 홍성의 맛집과 가볼 곳, 축제, 주차 정보를 모아 볼 수 있어유.", action: "place", actionLabel: "발견 열기" };
+    else if (/마켓|농산물|입고|장보기|나눔/.test(normalized)) reply = { text: "내일 들어올 농산물과 나눔물품은 마켓에서 미리 확인할 수 있어유.", actionLabel: "마켓 열기" };
+    else if (/모임|조인|join|친구|함께/.test(normalized.toLowerCase())) reply = { text: "같이 밥 먹고 산책할 이웃을 찾는다면 Join을 둘러봐유.", action: "join", actionLabel: "Join 열기" };
+    else if (/요리|레시피|먹는법|만들기/.test(normalized)) reply = { text: "홍성 재료로 만드는 쉬운 한 끼를 레시피에서 소개하고 있어유.", action: "recipe", actionLabel: "레시피 열기" };
+    else if (/숙소|머물|스테이|살아보기/.test(normalized)) reply = { text: "홍성에서 머물며 이웃을 만나는 스테이 이야기는 홈에서 볼 수 있어유.", action: "home", actionLabel: "스테이 보기" };
+    else reply = { text: "지금은 홍성의 장소, 마켓, Join, 레시피를 안내할 수 있어유. 궁금한 단어를 조금만 더 구체적으로 말해줘유." };
+    window.setTimeout(() => {
+      setIeumiMessages((current) => [...current, { id: Date.now() + 1, role: "ieumi", ...reply }]);
       setAskLoading(false);
-    }
+    }, 350);
   };
 
   return (
@@ -382,14 +343,9 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
           </div>
           <button className="stay-purpose-link" type="button" onClick={() => move("place")}>스테이와 주변 살펴보기 →</button>
         </section>
-        <section className="friends-intro shell" aria-labelledby="friends-title" style={{ "--friend-art-height": `${friendLayout.artHeight}px`, "--recipe-cta-top": `${friendLayout.buttonTop}px`, "--recipe-cta-right": `${friendLayout.buttonRight}px` } as React.CSSProperties}>
+        <section className="friends-intro ieumi-recipe-intro shell" aria-labelledby="friends-title">
           <div className="friends-copy"><span className="mini-label">IEUMI · RECIPE</span><h2 id="friends-title">이음이와 함께하는 레시피 공유</h2><p>홍성의 바다와 밭, 시장에서 만난 재료로 이음이가 쉬운 한 끼 레시피를 소개해요.</p></div>
           <button className="recipe-cta" type="button" onClick={() => move("recipe")}>홍성 재료 만나러 가기</button>
-          <div className="friends-art ieumi-art" aria-label="홍성 대표 캐릭터 이음이">
-            {IEUMI_FRIENDS.map((friend) => <button key={friend.id} type="button" className={`friend-3d friend-${friend.id}${selectedFriend?.id === friend.id ? " selected" : ""}`} onClick={() => setSelectedFriend({ ...friend, line: friend.lines[Math.floor(Math.random() * friend.lines.length)] })} aria-label={`${friend.name} 소개 보기`}><img src={friend.image} alt="" />{selectedFriend?.id === friend.id && <span className="friend-speech" role="status"><b>{friend.name}</b><span>{selectedFriend.line}</span></span>}</button>)}
-          </div>
-          {user && <button className="friend-layout-toggle" type="button" onClick={() => setShowFriendLayoutControls((open) => !open)}>{showFriendLayoutControls ? "배치 조정 닫기" : "배치 조정"}</button>}
-          {showFriendLayoutControls && user && <aside className="friend-layout-controls" aria-label="레시피 친구 영역 배치 조정"><b>레시피 친구 영역 배치</b><label>캐릭터 영역 높이 <input type="range" min="150" max="250" value={friendLayout.artHeight} onChange={(event) => setFriendLayout({ ...friendLayout, artHeight: Number(event.target.value) })} /><span>{friendLayout.artHeight}px</span></label><label>버튼 위 여백 <input type="range" min="0" max="70" value={friendLayout.buttonTop} onChange={(event) => setFriendLayout({ ...friendLayout, buttonTop: Number(event.target.value) })} /><span>{friendLayout.buttonTop}px</span></label><label>버튼 오른쪽 여백 <input type="range" min="0" max="70" value={friendLayout.buttonRight} onChange={(event) => setFriendLayout({ ...friendLayout, buttonRight: Number(event.target.value) })} /><span>{friendLayout.buttonRight}px</span></label><button type="button" onClick={() => setFriendLayout({ artHeight: 174, buttonTop: 10, buttonRight: 10 })}>기본 배치로 되돌리기</button><small>이 브라우저에 자동 저장됩니다.</small></aside>}
         </section>
         <section className="join-preview"><div className="shell"><div className="section-heading light"><div><span className="mini-label">JOIN · READY</span><h2>{joins.length > 0 ? "지금 참여할 수 있는 Join" : "첫 Join을 기다리고 있어요"}</h2><p>{joins.length > 0 ? `가장 가까운 일정부터 ${Math.min(joins.length, 3)}개를 확인해 보세요.` : "계정으로 로그인한 뒤 새로운 Join을 만들어보세요."}</p></div><button onClick={() => move("join")}>{joins.length > 0 ? "전체 Join 보기 →" : "Join 만들기 →"}</button></div>{joins.length > 0 && <div className="join-grid">{scheduledJoins.slice(0, 3).map((item) => <JoinCard key={item.id} item={item} joined={joined.includes(item.id)} onJoin={() => toggleJoin(item)} onDelete={() => deleteJoin(item.id)} onChat={() => openChat(item)} />)}</div>}</div></section>
       </>}
@@ -410,6 +366,16 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
         {user && <section className="profile-insights"><div className="profile-keywords"><span className="mini-label">MY ACTIVITY KEYWORDS</span><h2>대표 활동 키워드</h2><p>관심사와 검수 완료 활동을 바탕으로 최대 5개가 표시됩니다.</p><div>{profileMeta.interests.length ? profileMeta.interests.map((interest) => <span key={interest}>#{interest}</span>) : <em>온보딩에서 관심사를 선택해 주세요.</em>}</div></div><div className="activity-temperature"><span className="mini-label">TRUST TEMPERATURE</span><div className="temperature-head"><div><h2>{profileMeta.activityScore}°</h2><p>{profileMeta.activityScore >= 70 ? "정보 신뢰도가 높아요" : profileMeta.activityScore >= 30 ? "활동을 이어가고 있어요" : "첫 정확한 기록을 기다려요"}</p></div><div className="thermometer" aria-label={`활동 온도 ${profileMeta.activityScore}도`}><i style={{height: `${Math.max(7, Math.min(100, profileMeta.activityScore))}%`}} /></div></div><small>기본 30°에서 시작해요. 검수 완료된 정확한 정보는 올리고, 비매너·고의 허위정보가 확인되면 Master 검수 후 감점됩니다. 이후 폐업·휴업·정보 변경은 갱신 제보로만 처리하며 감점하지 않아요.</small></div></section>}
         <div className="keyword-panel" style={{marginTop: 24}}><div className="panel-title"><div><span className="mini-label">PARTICIPANT ACCOUNT</span><h2>{user ? "참가자 계정 연결 완료" : "참가자로 시작하기"}</h2></div><span className="test-badge">{user ? "참여 중" : "시작 전"}</span></div><p>{user ? "기수 인증 후 Join 생성·신청·방문 기록을 참가자 계정별로 관리합니다." : "Google 계정으로 로그인한 뒤 이용 유형과 관심사를 설정합니다."}</p>{user ? <a className="primary" href="/api/auth/logout">참여 종료하기</a> : <a className="primary google-login" href="/api/auth/google?return_to=/">◎ Google로 시작하기</a>}</div>
       </section>}
+
+      <div className={`ieumi-pet-layer${ieumiChatOpen ? " chat-open" : ""}`}>
+        {ieumiChatOpen && <section className="ieumi-chat" role="dialog" aria-modal="false" aria-label="이음이 홍성 안내 챗봇">
+          <div className="ieumi-chat-head"><div><img src="/brand/ieumi.png" alt=""/><span><b>이음이</b><small>홍성 안내 친구</small></span></div><button type="button" onClick={() => setIeumiChatOpen(false)} aria-label="이음이 채팅 닫기">×</button></div>
+          <div className="ieumi-chat-thread" aria-live="polite">{ieumiMessages.map((message) => <div key={message.id} className={`ieumi-message ${message.role}`}><p>{message.text}</p>{message.actionLabel && <button type="button" onClick={() => { if (message.action) move(message.action); else setShowMiniMarket(true); setIeumiChatOpen(false); }}>{message.actionLabel} →</button>}</div>)}{askLoading && <div className="ieumi-message ieumi typing"><span/><span/><span/></div>}</div>
+          <div className="ieumi-quick-asks">{["가볼 곳 알려줘", "마켓 뭐가 들어와?", "Join 찾아줘"].map((question) => <button key={question} type="button" onClick={() => setAskQuestion(question)}>{question}</button>)}</div>
+          <form className="ieumi-composer" onSubmit={submitQuestion}><label htmlFor="ieumi-question">이음이에게 물어보기</label><div><input id="ieumi-question" value={askQuestion} onChange={(event) => setAskQuestion(event.target.value)} placeholder="예: 홍성에서 가볼 곳은?"/><button type="submit" disabled={askLoading || !askQuestion.trim()}>보내기</button></div></form>
+        </section>}
+        <button className="ieumi-pet" type="button" onClick={() => setIeumiChatOpen((open) => !open)} aria-expanded={ieumiChatOpen} aria-label={ieumiChatOpen ? "이음이 채팅 닫기" : "이음이에게 홍성 물어보기"}><span>물어봐유!</span><img src="/brand/ieumi.png" alt=""/></button>
+      </div>
 
       <nav className="mobile-nav" aria-label="주요 메뉴"><button className={tab === "home" ? "active" : ""} onClick={()=>move("home")}><span>🏠</span>홈</button><button className={tab === "place" ? "active" : ""} onClick={()=>move("place")}><span>🗺️</span>발견</button><button className="market-tab" type="button" onClick={()=>setShowMiniMarket(true)}><span>🧺</span>마켓</button><button className="join-fab" onClick={()=>move("join")}><span>＋</span>Join</button><button className={tab === "profile" ? "active" : ""} onClick={()=>move("profile")}><span>👤</span>프로필</button></nav>
 
