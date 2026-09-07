@@ -243,3 +243,7 @@ footer{background:#183f37;color:white;padding:35px 0;margin-top:30px}footer .she
 
 /* 이음프렌즈 카드의 읽는 순서: 제목 → 설명 → 레시피 → 캐릭터 */
 .friends-intro>.recipe-cta{position:static!important;justify-self:start;display:inline-flex;min-width:0;margin:var(--recipe-cta-top) 0 4px var(--recipe-cta-right);padding:0!important;border:0!important;border-radius:0!important;background:none!important;box-shadow:none!important;color:var(--green)!important;font-size:20px!important;font-weight:900!important;line-height:1.3!important;text-align:left;text-decoration:underline;text-underline-offset:7px}.friends-intro>.recipe-cta:hover{color:var(--burgundy)!important;transform:none!important;box-shadow:none!important}.friends-intro>.friends-art{grid-column:1/-1;width:100%}@media(max-width:800px){.friends-intro>.recipe-cta{font-size:18px!important;text-underline-offset:6px}}
+/* 확정 대표 캐릭터 이음이: 기존 여섯 캐릭터 대신 한 캐릭터를 표시 */
+.friends-art.ieumi-art{justify-content:center;align-items:center}
+.friends-art.ieumi-art .friend-ieumi{flex:0 1 260px;width:min(78%,260px)!important;height:100%!important;max-height:230px}
+.friend-ieumi .friend-speech{left:50%!important;right:auto!important;transform:translateX(-50%)!important;bottom:78%!important}

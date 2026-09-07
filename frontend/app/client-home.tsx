@@ -42,12 +42,7 @@ type IeumiFriend = { id: string; name: string; image: string; eyebrow: string; l
 
 const ONBOARDING_INTERESTS = ["맛집 탐방", "로컬 창업", "농사·텃밭", "산책·등산", "사진·기록", "함께 요리", "반려동물", "문화·축제"];
 const IEUMI_FRIENDS: IeumiFriend[] = [
-  { id: "ali", name: "알이", image: "/brand/characters-3d/ali-3d.png", eyebrow: "HONGSEONG GARLIC", lines: ["홍성 마늘 듬뿍, 한 접시 어때?", "의성마늘도 멋지지만 홍성도 지지 않아!", "오늘 밥상은 마늘 향으로 꽉 채우자!", "싱싱한 홍성 마늘부터 챙겨!"], story: "알이는 밥상과 장보기를 제일 먼저 챙기는 든든한 친구예요. 홍성의 맛있는 하루를 발견하면 제일 먼저 달려가요." },
-  { id: "saemi", name: "새미", image: "/brand/characters-3d/saemi-3d.png", eyebrow: "NAMDANG SAEJOGAE", lines: ["새조개에 미나리, 초장 콕!", "남당항의 봄은 새조개부터야.", "오늘 바다 소식, 내가 알려줄게!", "새조개 한 입이면 봄이 성큼!"], story: "남당항 바다 소식을 조용히 모으는 새조개 친구예요. 제철의 설렘과 해안의 풍경을 들려줘요." },
-  { id: "gimi", name: "김이", image: "/brand/characters-3d/gimi-3d.png", eyebrow: "GWANGCHEON GIM", lines: ["광천김에 따끈한 밥이면 끝!", "바삭한 김 한 장, 행복 한 숟갈!", "광천김은 밥상의 든든한 친구지.", "오늘 김밥 싸서 소풍 갈래?"], story: "광천김처럼 담백하지만 알찬 기록가예요. 동네의 작은 가게와 좋은 소식을 꼼꼼히 이어줘요." },
-  { id: "haru", name: "하루", image: "/brand/characters-3d/haru-3d.png", eyebrow: "NAMDANG PORT PRAWN", lines: ["대하는 소금구이가 제맛이야!", "남당항 축제, 같이 놀러 갈래?", "바다 바람 맞으며 산책하자!", "오늘 기분도 통통하게 올려볼까?"], story: "남당항의 활기처럼 호기심이 많은 친구예요. 바다, 축제, 오늘 재미있는 일을 발견하면 모두에게 알려줘요." },
-  { id: "duri", name: "두리", image: "/brand/characters-3d/duri-3d.png", eyebrow: "TOFU & BEANS", lines: ["두부는 노릇하게 부쳐야 고소해!", "따끈한 두부 한 모, 마음도 몽글몽글.", "오늘은 두부로 가볍고 든든하게!", "좋은 재료는 같이 나눠 먹자."], story: "천천히 만드는 일상의 기쁨을 좋아해요. 시장과 밥상, 이웃의 다정한 시간을 함께 이어가요." },
-  { id: "hangyeol", name: "한결이", image: "/brand/characters-3d/hangyeol-3d.png", eyebrow: "HONGSEONG HANWOO", lines: ["한우는 천천히 구워야 제맛이지!", "홍성 한우로 든든하게 이어가유!", "맛있는 한 끼가 친구를 더 가깝게 해.", "따뜻한 밥상부터 함께 준비하자!"], story: "홍성 한우를 닮은 든든한 중심 친구예요. 다섯 친구와 사람, 장소를 한결같이 연결해요." },
+  { id: "ieumi", name: "이음이", image: "/brand/ieumi.png", eyebrow: "HONGSEONG · IEUMI", lines: ["홍성의 작은 일상을 함께 이어가유!", "오늘은 홍성에서 무엇을 만나볼까?", "좋은 재료로 따뜻한 한 끼를 나눠요."], story: "소복한 흙 위에 새싹이 자란 이음이는 홍성의 땅과 사람, 일상을 이어주는 친구예요." },
 ];
 
 export default function ClientHome({ user }: { user: GoogleUser | null }) {
@@ -388,9 +383,9 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
           <button className="stay-purpose-link" type="button" onClick={() => move("place")}>스테이와 주변 살펴보기 →</button>
         </section>
         <section className="friends-intro shell" aria-labelledby="friends-title" style={{ "--friend-art-height": `${friendLayout.artHeight}px`, "--recipe-cta-top": `${friendLayout.buttonTop}px`, "--recipe-cta-right": `${friendLayout.buttonRight}px` } as React.CSSProperties}>
-          <div className="friends-copy"><span className="mini-label">IEUMI FRIENDS · RECIPE</span><h2 id="friends-title">홍성 친구들의 다양한 레시피 공유</h2><p>홍성의 바다와 밭, 시장에서 만난 재료로 친구들이 쉬운 한 끼 레시피를 나눠요.</p></div>
+          <div className="friends-copy"><span className="mini-label">IEUMI · RECIPE</span><h2 id="friends-title">이음이와 함께하는 레시피 공유</h2><p>홍성의 바다와 밭, 시장에서 만난 재료로 이음이가 쉬운 한 끼 레시피를 소개해요.</p></div>
           <button className="recipe-cta" type="button" onClick={() => move("recipe")}>홍성 재료 만나러 가기</button>
-          <div className="friends-art" aria-label="한결이와 이음이 프렌즈 캐릭터">
+          <div className="friends-art ieumi-art" aria-label="홍성 대표 캐릭터 이음이">
             {IEUMI_FRIENDS.map((friend) => <button key={friend.id} type="button" className={`friend-3d friend-${friend.id}${selectedFriend?.id === friend.id ? " selected" : ""}`} onClick={() => setSelectedFriend({ ...friend, line: friend.lines[Math.floor(Math.random() * friend.lines.length)] })} aria-label={`${friend.name} 소개 보기`}><img src={friend.image} alt="" />{selectedFriend?.id === friend.id && <span className="friend-speech" role="status"><b>{friend.name}</b><span>{selectedFriend.line}</span></span>}</button>)}
           </div>
           {user && <button className="friend-layout-toggle" type="button" onClick={() => setShowFriendLayoutControls((open) => !open)}>{showFriendLayoutControls ? "배치 조정 닫기" : "배치 조정"}</button>}
