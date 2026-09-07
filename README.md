@@ -1,72 +1,146 @@
-# 홍성메이트 (Hongseong Mate)
+# 홍성, 이어가유
 
-「홍성, 이어가유」 구옥 스테이 참가자를 위한 **근거리 정보**와 **Join 커뮤니티**, **AI 안내(RAG)** 서비스입니다.
+홍성의 유휴공간 스테이를 거점으로 청년이 지역에서 잠시 지내보고, 장소·이웃·농산물·모임과 연결되도록 돕는 모바일 우선 웹앱입니다.
 
-이 저장소는 [gon311/DLthon_2nd](https://github.com/gon311/DLthon_2nd) (버킷제주, AI엔지니어링 부트캠프 DLthon 팀 프로젝트, 2026.8.11 발표)를 원본으로 하여, 홍성 지역에 맞게 새로 만드는 프로젝트입니다. 원본 프로젝트의 구조(근처 발견 지도, Join 커뮤니티, RAG 기반 AI 질문 응답)를 그대로 가져오고, 브랜딩과 지역 데이터만 홍성으로 교체했습니다.
+- 라이브 데모: https://hongseongmate.ep01-sleepwar.chatgpt.site/
+- 서비스명: 홍성, 이어가유 (Hongseong Mate / Local Stay Community)
+- 화면 원칙: PC에서도 약 600px 폭의 모바일 앱 경험으로 표시
 
-## 프로젝트 개요
+## 현재 구현 범위
 
-혼자 또는 짧게 홍성에 머무는 참가자를 위해, 구옥 스테이 투숙객끼리 순간을 함께하는 Join 시스템과 근거리 정보(축제 일정, 오일장, 실제 방문객이 남긴 로컬 맛집 리뷰)를 제공합니다.
+- **홈** — 유휴공간 스테이 소개, `홍성에서 지내보기` 핵심 행동, 오늘의 바로가기
+- **발견** — 홍성의 장소·행사·주차장 등 지역 정보 탐색
+- **마켓** — 다음 날 입고될 농산물·나눔물품을 미리 보는 스테이 미니마켓
+- **Join** — 지역에서 함께할 모임을 만들고 참여하는 커뮤니티
+- **레시피** — 홍성 재료 캐릭터와 출처가 있는 레시피 콘텐츠
+- **프로필** — 로그인 사용자 활동과 기본 설정
+- **Google 로그인** — 로그인 후 이용 유형과 관심사 설정
+- **이음이 안내** — 화면 상단의 펫형 안내 친구가 숙소·앱 기능·생활 안전 정보를 답하고 공식 출처를 연결
 
-## 원본과 다른 점 / 앞으로 채워야 할 것
+현재 하단 메뉴는 `홈 · 발견 · 마켓 · Join · 프로필`입니다. 메시지는 참여한 Join의 채팅에서 이용합니다.
 
-자세한 항목은 [ADAPTATION_TODO.md](./ADAPTATION_TODO.md)를 참고하세요. 요약하면:
+## 스테이·생활 안전 정보 기준
 
-- 브랜딩(제주·버킷 → 홍성·홍성메이트)은 화면에 보이는 핵심 문구 위주로 반영했습니다.
-- 구옥 스테이 위치는 아직 정해지지 않아 비워뒀습니다 — 지도는 "위치 미정" 상태로 표시되고, 위치가 정해지면 `.env`에 좌표를 채워 넣으면 됩니다.
-- 근처 장소 예시는 이번 세션에서 검증된 실제 홍성 장소(남당항, 홍성전통시장, 홍주읍성, 용봉산)로 바꿨지만, 실제 좌표·거리 데이터는 아직 없습니다.
-- 축제 일정, 오일장 일정·장소, 로컬 맛집 리뷰 데이터는 아직 없습니다 — 지어낼 수 없는 부분이라 실제 데이터 수집이 필요합니다.
-
-## 구옥 스테이 안내 기준
-
-- 활용이 줄어든 홍성의 구옥을 청년과 여행자가 짧게 머물며 지역의 일상을 경험하는 공유 스테이로 연결합니다.
-- 공용주방에서 직접 요리하고, Join을 통해 투숙객과 지역 이웃을 만나는 체류 경험을 지향합니다.
-- 정확한 위치·주소, 숙박 요금, 객실과 편의시설, 모집 및 예약 일정은 아직 확정되지 않았습니다.
-- 이음이 안내 챗봇은 위 내용을 기준으로 답하며, 미확정 정보는 임의로 안내하지 않습니다.
-
-## 이음이 생활·안전 정보 기준
-
-- 이음이는 앱의 숙소·발견·마켓·Join·레시피·프로필 기능을 안내합니다.
+- 구옥 스테이는 활용이 줄어든 홍성의 공간을 청년과 여행자가 짧게 머물며 지역의 일상을 경험하는 공유 스테이로 연결합니다.
+- 정확한 숙소 위치·요금·객실·편의시설·예약 일정은 아직 확정되지 않았으며, 이음이는 미확정 정보를 임의로 안내하지 않습니다.
 - 병원·약국은 홍성의료원 공식 정보와 건강보험심사평가원·응급의료포털 E-Gen 조회를 연결합니다.
 - 경찰·소방은 홍성 관할 공식 기관만 안내하며, 긴급 상황에는 112·119 연락을 우선 안내합니다.
 - 숙소 주소가 확정되기 전에는 기관을 가까운 순서로 임의 배치하지 않습니다.
 - 저장소와 현재 작업 기록에는 공공데이터포털 활용신청 번호·승인 내역·서비스 키가 없어, API 연동은 아직 확인되지 않은 상태입니다.
 
-## 설치 및 실행
+## PC에서 이어서 실행하기
 
-### 1. 환경 설정
+### 1. 소스 받기
 
 ```bash
-# 가상환경 생성
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-
-# 의존성 설치
-pip install -r requirements.txt
+git clone https://github.com/jsk900210-oss/hongseong-ieogayu.git
+cd hongseong-ieogayu/frontend
+npm install
 ```
 
-### 프론트엔드
+이미 저장소를 받은 PC라면 아래만 실행합니다.
 
 ```bash
+git pull origin main
 cd frontend
 npm install
+```
+
+### 2. 로컬 환경 변수 설정
+
+`frontend/.env.example`을 복사해 `frontend/.env.local`을 만들고 값을 채웁니다.
+
+```bash
+copy .env.example .env.local
+```
+
+필수 항목:
+
+```env
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+AUTH_SECRET=
+```
+
+Google OAuth 승인 리디렉션 URI에는 로컬 주소를 등록합니다.
+
+```text
+http://localhost:3000/api/auth/google/callback
+```
+
+### 3. 개발 서버 실행
+
+```bash
 npm run dev
 ```
 
-### RAG 백엔드
+브라우저에서 `http://localhost:3000`을 엽니다.
 
-저장소 루트에서 실행합니다.
+### 4. 배포 전 확인
 
 ```bash
-pip install -r backend/requirements.txt
-python backend/build_index.py --csv data/processed/guesthouse_pois.csv --collection poi_demo --smoke-test
+npm run build
 ```
 
-실행 전 `OPENAI_API_KEY` 환경변수가 필요합니다. `backend/config.py`의 좌표(`HONGSEONG_MATE_LATITUDE`, `HONGSEONG_MATE_LONGITUDE`)는 구옥 스테이 위치가 아직 없어 비워뒀습니다 — 위치가 정해지면 `.env`에 값을 채워 넣으세요.
+## 프로젝트 구조
 
-## 표준 파일 구조
+```text
+frontend/
+  app/
+    client-home.tsx       # 홈·발견·마켓·Join·레시피·프로필 화면
+    local-discovery.tsx   # 홍성 둘러보기
+    api/                  # 로그인, Join, 프로필 API
+  db/                     # Cloudflare D1 + Drizzle 스키마
+  drizzle/                # DB 마이그레이션
+  public/brand/           # 로고와 이음이 프렌즈 캐릭터
+  .openai/hosting.json    # 데모 배포 설정
+backend/                  # 향후 RAG/데이터 처리 참고 코드
+data/                     # 지역 데이터와 가공 자료
+docs/                     # 서비스·API 참고 문서
+```
 
-- `frontend/` — Next.js + TypeScript 웹, Cloudflare D1·Drizzle
-- `backend/` — FastAPI · RAG · ChromaDB 검색 코드
-- `data/` — POI CSV와 수집·가공 스크립트
-- `docs/` — API 계약, 지식베이스 스키마
+## 기술 구성
+
+- React / Vinext / TypeScript
+- Cloudflare Workers + D1
+- Drizzle ORM
+- Google OAuth
+- Leaflet 기반 지역 발견 지도
+
+## 작업할 때 유의할 점
+
+- 실제 조리법과 출처가 확인된 레시피만 게시합니다.
+- 농가 단기 일자리 매칭은 안전·보험·알선 관련 검토 전까지 ‘준비 중’ 범위로만 다룹니다.
+- Google OAuth 비밀값과 `AUTH_SECRET`은 GitHub에 올리지 않습니다.
+- `hongseong-mate-site-*.tar.gz`, 임시 미리보기 이미지, `.npm-cache`는 배포용/로컬 산출물이므로 커밋하지 않습니다.
+
+## 배포
+
+현재 라이브 데모는 Codex Sites 배포를 사용합니다. GitHub에 `main` 브랜치로 소스를 올린 뒤, `frontend`에서 빌드가 성공한 상태로 새 버전을 배포합니다.
+
+## 다른 PC에서 같은 Codex 작업 이어가기
+
+코드는 GitHub으로 동기화되고, **대화 내용까지 그대로 옮기려면 Codex의 채팅 인계 기능**을 사용합니다. 단순 공유 링크는 읽기 전용 사본이므로 작업을 이어 쓸 수 없습니다.
+
+### 다른 PC 준비
+
+1. ChatGPT 데스크톱 앱을 최신 버전으로 설치하고, 현재 PC와 같은 OpenAI 계정·워크스페이스로 로그인합니다.
+2. 이 저장소를 내려받아 Codex 프로젝트로 엽니다.
+
+   ```bash
+   git clone https://github.com/jsk900210-oss/hongseong-ieogayu.git
+   ```
+
+3. 앱 설정에서 **원격(Remote) / 다른 기기 연결 허용**을 켭니다.
+4. Codex 앱과 프로젝트를 열어둔 채 온라인 상태로 둡니다.
+
+### 현재 PC에서 채팅 인계
+
+1. 옮길 Codex 채팅 하단의 현재 실행 위치(`Local` 등)를 선택합니다.
+2. **호스트 변경** 또는 **채팅 인계**를 선택합니다.
+3. 목록의 다른 PC를 선택하고 저장소·브랜치를 확인합니다.
+4. **인계**를 누르면 대화와 Git 작업 상태가 대상 PC로 이동합니다.
+
+두 PC에서 같은 Git 저장소와 같은 프로젝트 경로 구조가 등록되어야 대상 PC가 목록에 나타납니다. 원격 연결 기능은 계정·앱 버전에 따라 표시 여부가 다를 수 있습니다.
+
+공식 안내: https://learn.chatgpt.com/ko-KR/docs/remote-connections
