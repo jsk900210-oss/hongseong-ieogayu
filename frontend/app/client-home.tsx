@@ -358,7 +358,7 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
             <span className="eyebrow">홍성, 이어가유 · 유휴공간 스테이</span>
             <h1>비어 있던 공간에<br/><em>함께할 순간</em>을 담아요</h1>
             <p>묵고, 함께 밥 먹고, 이웃이 되는 며칠.<br/>혼자 온 여행자도 금세 로컬 친구가 됩니다.</p>
-            <div className="space-flow" aria-label="홍성메이트 공간 운영 방식"><b>유휴공간 대여</b><span>→</span><b>로컬 체험</b><span>→</span><b>이웃 Join</b></div>
+            <div className="space-flow" aria-label="홍성에서 함께하는 경험"><b>홍성에 머물기</b><span>→</span><b>함께 밥 먹기</b><span>→</span><b>이웃 만나기</b></div>
             <div className="hero-actions">
               <button className="primary" type="button" onClick={() => document.getElementById("stay-purpose-title")?.scrollIntoView({ behavior: "smooth", block: "start" })}>홍성에서 지내보기 <span>→</span></button>
               <button className="hero-secondary" onClick={() => move("place")}>홍성 둘러보기</button>
