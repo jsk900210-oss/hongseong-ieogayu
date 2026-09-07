@@ -64,7 +64,7 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
   const [toast, setToast] = useState("");
   const [ieumiChatOpen, setIeumiChatOpen] = useState(false);
   const [ieumiMessages, setIeumiMessages] = useState<IeumiMessage[]>([
-    { id: 1, role: "ieumi", text: "안녕! 홍성에서 무엇을 찾고 있어유? 장소, 마켓, 모임, 레시피를 함께 찾아볼게유." },
+    { id: 1, role: "ieumi", text: "안녕! 홍성에서 무엇을 찾고 있어유? 숙소, 장소, 마켓, 모임, 레시피를 함께 찾아볼게유." },
   ]);
   const [askQuestion, setAskQuestion] = useState("");
   const [askLoading, setAskLoading] = useState(false);
@@ -278,12 +278,17 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
     setAskLoading(true);
     const normalized = question.replaceAll(" ", "");
     let reply: Omit<IeumiMessage, "id" | "role">;
-    if (/맛집|가볼|여행|축제|주차|캠핑|장소/.test(normalized)) reply = { text: "발견에서 홍성의 맛집과 가볼 곳, 축제, 주차 정보를 모아 볼 수 있어유.", action: "place", actionLabel: "발견 열기" };
+    if (/(숙소|스테이|구옥).*(어떤|소개|설명)|(어떤|소개|설명).*(숙소|스테이|구옥)/.test(normalized)) reply = { text: "홍성, 이어가유 숙소는 활용이 줄어든 지역의 구옥을 청년과 여행자가 부담 없이 머물며 홍성의 일상을 경험하는 공유 스테이로 연결하는 공간이에유. 혼자 와도 공용주방에서 식사하고 Join으로 이웃을 만날 수 있어유.", action: "home", actionLabel: "스테이 소개 보기" };
+    else if (/(숙소|스테이).*(위치|주소|어디)|(위치|주소).*(숙소|스테이)/.test(normalized)) reply = { text: "구옥 스테이의 정확한 위치와 주소는 아직 정해지지 않았어유. 확정 전에는 임의의 주소를 안내하지 않고, 정해지는 대로 발견 지도에 연결할게유." };
+    else if (/(숙소|스테이).*(가격|요금|비용|얼마)|(가격|요금|비용).*(숙소|스테이)/.test(normalized)) reply = { text: "부담을 낮춘 체류를 목표로 하지만, 숙박 요금은 아직 확정되지 않았어유. 운영 방식과 금액이 정해지면 정확한 내용만 안내할게유." };
+    else if (/(숙소|스테이).*(예약|신청|입실|체크인)|(예약|신청|입실|체크인).*(숙소|스테이)/.test(normalized)) reply = { text: "현재 구옥 스테이는 준비 단계라 예약을 받고 있지 않아유. 모집 일정과 신청 방법이 확정되면 이음이가 바로 알려줄게유." };
+    else if (/(숙소|스테이).*(시설|주방|생활)|(시설|주방).*(숙소|스테이)/.test(normalized)) reply = { text: "현재 소개된 생활 공간은 함께 요리할 수 있는 공용주방이에유. 객실 수, 욕실, 주차 같은 세부 시설은 아직 확정 전이라 준비된 내용만 안내하고 있어유." };
+    else if (/숙소|머물|스테이|살아보기/.test(normalized)) reply = { text: "홍성에서 짧게 머물며 공용주방을 이용하고, 지역의 일상과 이웃 Join을 경험하는 구옥 공유 스테이를 준비하고 있어유. 위치·요금·예약 일정은 아직 확정 전이에유.", action: "home", actionLabel: "스테이 소개 보기" };
+    else if (/맛집|가볼|여행|축제|주차|캠핑|장소/.test(normalized)) reply = { text: "발견에서 홍성의 맛집과 가볼 곳, 축제, 주차 정보를 모아 볼 수 있어유.", action: "place", actionLabel: "발견 열기" };
     else if (/마켓|농산물|입고|장보기|나눔/.test(normalized)) reply = { text: "내일 들어올 농산물과 나눔물품은 마켓에서 미리 확인할 수 있어유.", actionLabel: "마켓 열기" };
     else if (/모임|조인|join|친구|함께/.test(normalized.toLowerCase())) reply = { text: "같이 밥 먹고 산책할 이웃을 찾는다면 Join을 둘러봐유.", action: "join", actionLabel: "Join 열기" };
     else if (/요리|레시피|먹는법|만들기/.test(normalized)) reply = { text: "홍성 재료로 만드는 쉬운 한 끼를 레시피에서 소개하고 있어유.", action: "recipe", actionLabel: "레시피 열기" };
-    else if (/숙소|머물|스테이|살아보기/.test(normalized)) reply = { text: "홍성에서 머물며 이웃을 만나는 스테이 이야기는 홈에서 볼 수 있어유.", action: "home", actionLabel: "스테이 보기" };
-    else reply = { text: "지금은 홍성의 장소, 마켓, Join, 레시피를 안내할 수 있어유. 궁금한 단어를 조금만 더 구체적으로 말해줘유." };
+    else reply = { text: "지금은 홍성의 숙소, 장소, 마켓, Join, 레시피를 안내할 수 있어유. 궁금한 단어를 조금만 더 구체적으로 말해줘유." };
     window.setTimeout(() => {
       setIeumiMessages((current) => [...current, { id: Date.now() + 1, role: "ieumi", ...reply }]);
       setAskLoading(false);
@@ -371,7 +376,7 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
         {ieumiChatOpen && <section className="ieumi-chat" role="dialog" aria-modal="false" aria-label="이음이 홍성 안내 챗봇">
           <div className="ieumi-chat-head"><div><img src="/brand/ieumi.png" alt=""/><span><b>이음이</b><small>홍성 안내 친구</small></span></div><button type="button" onClick={() => setIeumiChatOpen(false)} aria-label="이음이 채팅 닫기">×</button></div>
           <div className="ieumi-chat-thread" aria-live="polite">{ieumiMessages.map((message) => <div key={message.id} className={`ieumi-message ${message.role}`}><p>{message.text}</p>{message.actionLabel && <button type="button" onClick={() => { if (message.action) move(message.action); else setShowMiniMarket(true); setIeumiChatOpen(false); }}>{message.actionLabel} →</button>}</div>)}{askLoading && <div className="ieumi-message ieumi typing"><span/><span/><span/></div>}</div>
-          <div className="ieumi-quick-asks">{["가볼 곳 알려줘", "마켓 뭐가 들어와?", "Join 찾아줘"].map((question) => <button key={question} type="button" onClick={() => setAskQuestion(question)}>{question}</button>)}</div>
+          <div className="ieumi-quick-asks">{["숙소는 어떤 곳이야?", "숙소 예약할 수 있어?", "가볼 곳 알려줘", "마켓 뭐가 들어와?"].map((question) => <button key={question} type="button" onClick={() => setAskQuestion(question)}>{question}</button>)}</div>
           <form className="ieumi-composer" onSubmit={submitQuestion}><label htmlFor="ieumi-question">이음이에게 물어보기</label><div><input id="ieumi-question" value={askQuestion} onChange={(event) => setAskQuestion(event.target.value)} placeholder="예: 홍성에서 가볼 곳은?"/><button type="submit" disabled={askLoading || !askQuestion.trim()}>보내기</button></div></form>
         </section>}
         <button className="ieumi-pet" type="button" onClick={() => setIeumiChatOpen((open) => !open)} aria-expanded={ieumiChatOpen} aria-label={ieumiChatOpen ? "이음이 채팅 닫기" : "이음이에게 홍성 물어보기"}><span>물어봐유!</span><img src="/brand/ieumi.png" alt=""/></button>
