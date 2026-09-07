@@ -5,11 +5,33 @@ import "leaflet/dist/leaflet.css";
 import markets from "../../data/hongseong/markets.json";
 import festivals from "../../data/hongseong/festivals.json";
 
-type DiscoveryView = "around" | "markets" | "festivals" | "reviews" | "recommended" | "hikes" | "camping" | "parking";
+type DiscoveryView = "around" | "nearby" | "markets" | "festivals" | "reviews" | "recommended" | "hikes" | "camping" | "parking";
 type Review = { id: number; place: string; category: string; menu: string; rating: number; body: string; author: string; visitedAt: string };
 type UserLocation = { lat: number; lon: number };
+type NearbyCategory = "all" | "mart" | "convenience" | "bakery" | "cafe" | "restaurant" | "hospital" | "pharmacy" | "bank" | "fuel" | "public" | "laundry";
+type NearbyPlace = { id: string; name: string; category: string; categoryKey: NearbyCategory; address: string; roadAddress: string; phone: string; lat: number; lon: number; distance: number | null; url: string };
 
 const HONGSEONG_CENTER: UserLocation = { lat: 36.601, lon: 126.661 };
+const NEARBY_CATEGORIES: readonly { key: NearbyCategory; label: string; icon: string }[] = [
+  { key: "all", label: "전체", icon: "📍" },
+  { key: "mart", label: "마트", icon: "🛒" },
+  { key: "convenience", label: "편의점", icon: "🏪" },
+  { key: "bakery", label: "빵집", icon: "🥐" },
+  { key: "cafe", label: "카페", icon: "☕" },
+  { key: "restaurant", label: "음식점", icon: "🍚" },
+  { key: "hospital", label: "병원", icon: "🏥" },
+  { key: "pharmacy", label: "약국", icon: "💊" },
+  { key: "bank", label: "은행", icon: "🏦" },
+  { key: "fuel", label: "주유소", icon: "⛽" },
+  { key: "public", label: "공공기관", icon: "🏛️" },
+  { key: "laundry", label: "세탁소", icon: "🧺" },
+] as const;
+const NEARBY_AREAS = [
+  { key: "hongseong", label: "홍성읍", lat: 36.601, lon: 126.661 },
+  { key: "naepo", label: "내포", lat: 36.656, lon: 126.672 },
+  { key: "gwangcheon", label: "광천", lat: 36.503, lon: 126.624 },
+  { key: "namdang", label: "남당항", lat: 36.538, lon: 126.471 },
+] as const;
 
 const PLACES = [
   { name: "남당항", category: "대하 · 새조개", icon: "🦐", lat: 36.537983719, lon: 126.4710062376 },
@@ -87,9 +109,10 @@ const CAMPING_SPOTS = [
 ] as const;
 const REVIEW_POINTS: readonly { name: string; category: string; icon: string; lat: number; lon: number }[] = [];
 const LIFESTYLE_POINTS: readonly { name: string; category: string; icon: string; lat: number; lon: number }[] = [];
-const CATEGORY_LABELS: Record<DiscoveryView, string> = { around: "전체 장소", markets: "오일장", festivals: "축제", reviews: "메이트 추천 맛집", recommended: "메이트 추천 플레이스", hikes: "등산", camping: "캠핑", parking: "공영주차장" };
+const CATEGORY_LABELS: Record<DiscoveryView, string> = { around: "전체 장소", nearby: "주변 편의시설", markets: "오일장", festivals: "축제", reviews: "메이트 추천 맛집", recommended: "메이트 추천 플레이스", hikes: "등산", camping: "캠핑", parking: "공영주차장" };
 const CATEGORY_DESCRIPTIONS: Record<DiscoveryView, string> = {
   around: "검수된 관광·생활·편의 장소 전체",
+  nearby: "카카오맵에 등록된 마트·편의점·카페 등 생활 장소",
   markets: "장날과 위치가 확인된 전통시장",
   festivals: "개최 장소가 확인된 홍성 축제",
   reviews: "음식점·카페·베이커리 등 먹거리 장소",
@@ -136,7 +159,7 @@ const distanceKm = (from: UserLocation, to: { lat: number; lon: number }) => {
   return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 };
 
-function HongseongMap({ userLocation, items = PLACES, onSelect }: { userLocation: UserLocation; items?: readonly { name: string; category: string; icon: string; lat: number; lon: number; special?: boolean }[]; onSelect?: (name: string) => void }) {
+function HongseongMap({ userLocation, items = PLACES, onSelect, focusNearby = false }: { userLocation: UserLocation; items?: readonly { id?: string; name: string; category: string; icon: string; lat: number; lon: number; special?: boolean }[]; onSelect?: (key: string) => void; focusNearby?: boolean }) {
   const mapElement = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -155,7 +178,8 @@ function HongseongMap({ userLocation, items = PLACES, onSelect }: { userLocation
         maxBounds: countyBounds.pad(0.16),
         maxBoundsViscosity: 0.9,
       });
-      map.fitBounds(countyBounds, { padding: [12, 12] });
+      if (focusNearby) map.setView([userLocation.lat, userLocation.lon], 14);
+      else map.fitBounds(countyBounds, { padding: [12, 12] });
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: "© OpenStreetMap",
         maxZoom: 19,
@@ -188,7 +212,7 @@ function HongseongMap({ userLocation, items = PLACES, onSelect }: { userLocation
         })
         .catch(() => undefined);
 
-      SPECIAL_ZONES.forEach((zone) => {
+      if (!focusNearby) SPECIAL_ZONES.forEach((zone) => {
         L.circle([zone.lat, zone.lon], { radius: zone.radius, color: zone.hex, weight: 2, dashArray: "7 6", fillColor: zone.hex, fillOpacity: .18 })
           .on("click", () => onSelect?.(`area:${zone.id}`))
           .addTo(map!);
@@ -202,7 +226,7 @@ function HongseongMap({ userLocation, items = PLACES, onSelect }: { userLocation
           iconSize: place.name === "남당항" ? [49, 38] : [38, 38],
           iconAnchor: place.name === "남당항" ? [24, 34] : [19, 34],
         });
-        L.marker([place.lat, place.lon], { icon: marker, title: place.name }).bindTooltip(`${place.name} · ${place.category}`, { direction: "top", offset: [0, -28] }).on("click", () => onSelect?.(place.name)).addTo(map!);
+        L.marker([place.lat, place.lon], { icon: marker, title: place.name }).bindTooltip(`${place.name} · ${place.category}`, { direction: "top", offset: [0, -28] }).on("click", () => onSelect?.(place.id ?? place.name)).addTo(map!);
       });
 
       if (userLocation.lon >= HONGSEONG_BOUNDS.west && userLocation.lon <= HONGSEONG_BOUNDS.east && userLocation.lat >= HONGSEONG_BOUNDS.south && userLocation.lat <= HONGSEONG_BOUNDS.north) {
@@ -211,25 +235,91 @@ function HongseongMap({ userLocation, items = PLACES, onSelect }: { userLocation
     });
 
     return () => { disposed = true; map?.remove(); };
-  }, [userLocation, items, onSelect]);
+  }, [userLocation, items, onSelect, focusNearby]);
 
   return <>
     <div ref={mapElement} className="leaflet-map-canvas" aria-label="홍성군 장소 지도" />
     <div className="county-boundary-label">홍성군 생활권</div>
-    <div className="special-zone-legend"><b>특화생활권</b>{SPECIAL_ZONES.map((zone) => <span key={zone.id}><i className={zone.color} />{zone.shortName}</span>)}<small>프로그램 활용 범위 · 공식 행정경계 아님</small></div>
-    <div className="gps-map-badge"><span>●</span> 홍성군 전체 · 내 위치 기준 거리</div>
+    {!focusNearby && <div className="special-zone-legend"><b>특화생활권</b>{SPECIAL_ZONES.map((zone) => <span key={zone.id}><i className={zone.color} />{zone.shortName}</span>)}<small>프로그램 활용 범위 · 공식 행정경계 아님</small></div>}
+    <div className="gps-map-badge"><span>●</span> {focusNearby ? "검색 중심 · 반경 3km" : "홍성군 전체 · 내 위치 기준 거리"}</div>
   </>;
 }
 
 function CategoryMapPanel({ view }: { view: DiscoveryView }) {
   const items = useMemo(() => categoryItems(view), [view]);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
-  useEffect(() => setSelectedKey(null), [view]);
   const selectedPlace = items.find((item) => item.name === selectedKey);
   const selectedZone = SPECIAL_ZONES.find((zone) => `area:${zone.id}` === selectedKey);
   const selectedIndex = items.findIndex((item) => item.name === selectedKey);
   const mapLink = selectedPlace ? `https://map.naver.com/p/search/${encodeURIComponent(selectedPlace.name)}` : selectedZone ? `https://map.naver.com/p/search/${encodeURIComponent(selectedZone.name)}` : "#";
   return <div className="map-category-panel"><p className="category-filter-note"><b>{CATEGORY_LABELS[view]}</b>{CATEGORY_DESCRIPTIONS[view]}<i>지도 구역이나 장소를 눌러 자세히 보세요</i></p><div className="map-panel"><div className="real-map gps-map gps-active"><HongseongMap userLocation={HONGSEONG_CENTER} items={items} onSelect={setSelectedKey} /></div><aside className="result-list ranked-place-list"><div className="result-head"><b>{CATEGORY_LABELS[view]}</b><span>{selectedIndex >= 0 ? `${selectedIndex + 1}번 장소 선택됨` : selectedZone ? "생활권 안내" : view === "festivals" ? "가까운 일정순 · 2026.09.02 확인" : "리뷰·추천순"}</span></div><div className="ranked-place-scroll">{items.length ? items.map((item, index) => { const festival = view === "festivals" ? item as FestivalPoint : null; const state = festival ? festivalState(festival) : null; return <button key={item.name} className={`${item.name === selectedKey ? "selected-place" : ""}${state ? ` festival-row festival-${state}` : ""}`} onClick={() => setSelectedKey(item.name)}><span className="rank-number">{index + 1}</span><span className="place-icon mint">{item.icon}</span><span>{festival && <span className={`festival-state ${state}`}>{state === "ongoing" ? "진행중" : state === "upcoming" ? "진행예정" : state === "ended" ? "일정종료" : "일정 미정"}</span>}<small>{item.category}</small><b>{item.name}</b><p>{festival ? festivalDateLabel(festival) : view === "recommended" ? "메이트가 다시 가고 싶은 생활 장소" : "지도에서 위치를 확인하세요"}</p></span></button>; }) : <div className="empty-filter-result"><span>🔎</span><b>검수 완료된 장소를 준비 중이에요</b><p>메이트 추천과 운영 여부 검수가 완료되면 지도에 표시됩니다.</p></div>}</div></aside></div>{(selectedPlace || selectedZone) && <div className="modal-backdrop" role="presentation" onMouseDown={() => setSelectedKey(null)}><section className="place-detail-modal" role="dialog" aria-modal="true" aria-labelledby="map-place-title" onMouseDown={(event) => event.stopPropagation()}><button className="modal-close" type="button" aria-label="닫기" onClick={() => setSelectedKey(null)}>×</button><div className="place-detail-emoji">{selectedPlace?.icon ?? "🧭"}</div><div className="place-detail-heading"><span>{selectedZone ? "홍성 특화생활권" : selectedPlace?.category}</span><h2 id="map-place-title">{selectedPlace?.name ?? selectedZone?.name}</h2></div><p>{selectedZone?.detail ?? `${selectedPlace?.name}의 위치와 주변 정보를 지도에서 확인해 보세요.`}</p><dl><div><dt>주요 키워드</dt><dd>{selectedZone?.highlight ?? selectedPlace?.category}</dd></div><div><dt>지도 위치</dt><dd>{selectedZone ? "생활권 중심 기준" : "상세 위치 확인 가능"}</dd></div></dl><div className="place-detail-actions"><a className="primary" href={mapLink} target="_blank" rel="noreferrer">지도에서 길찾기 ↗</a><button type="button" onClick={() => setSelectedKey(null)}>목록으로 돌아가기</button></div><small className="place-detail-note">장소 운영 시간과 이용 가능 여부는 방문 전 다시 확인해 주세요.</small></section></div>}</div>;
+}
+
+function NearbyFacilities() {
+  const [category, setCategory] = useState<NearbyCategory>("all");
+  const [areaKey, setAreaKey] = useState<string>("hongseong");
+  const [center, setCenter] = useState<UserLocation>(HONGSEONG_CENTER);
+  const [places, setPlaces] = useState<NearbyPlace[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [locationMessage, setLocationMessage] = useState("");
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const params = new URLSearchParams({ category, lat: String(center.lat), lon: String(center.lon), radius: "3000" });
+    void fetch(`/api/nearby-places?${params}`, { signal: controller.signal })
+      .then(async (response) => {
+        const body = await response.json() as { places?: NearbyPlace[]; error?: string };
+        if (!response.ok) throw new Error(body.error || "주변 장소를 불러오지 못했어요.");
+        setPlaces(body.places ?? []);
+      })
+      .catch((reason: unknown) => {
+        if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : "주변 장소를 불러오지 못했어요.");
+      })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
+  }, [category, center]);
+
+  const chooseArea = (key: string) => {
+    if (key === areaKey) return;
+    const area = NEARBY_AREAS.find((candidate) => candidate.key === key);
+    if (!area) return;
+    setLoading(true); setError(""); setSelectedId(null);
+    setAreaKey(area.key); setCenter({ lat: area.lat, lon: area.lon }); setLocationMessage("");
+  };
+  const chooseCategory = (key: NearbyCategory) => {
+    if (key === category) return;
+    setLoading(true); setError(""); setSelectedId(null); setCategory(key);
+  };
+  const findNearby = () => {
+    if (!navigator.geolocation) { setLocationMessage("이 기기에서는 현재 위치를 사용할 수 없어요."); return; }
+    setLocationMessage("현재 위치를 확인하고 있어요…");
+    navigator.geolocation.getCurrentPosition(({ coords }) => {
+      const inside = coords.longitude >= HONGSEONG_BOUNDS.west && coords.longitude <= HONGSEONG_BOUNDS.east && coords.latitude >= HONGSEONG_BOUNDS.south && coords.latitude <= HONGSEONG_BOUNDS.north;
+      if (!inside) { setLocationMessage("홍성군 안에서 현재 위치 주변 장소를 확인할 수 있어요."); return; }
+      setLoading(true); setError(""); setSelectedId(null);
+      setAreaKey("current"); setCenter({ lat: coords.latitude, lon: coords.longitude }); setLocationMessage("현재 위치 반경 3km를 보여드려요.");
+    }, () => setLocationMessage("브라우저에서 위치 권한을 허용해 주세요."), { enableHighAccuracy: false, timeout: 12000, maximumAge: 300000 });
+  };
+  const selected = places.find((place) => place.id === selectedId);
+  const iconFor = (key: NearbyCategory) => NEARBY_CATEGORIES.find((item) => item.key === key)?.icon ?? "📍";
+  const mapItems = useMemo(() => places.map((place) => ({ ...place, icon: iconFor(place.categoryKey) })), [places]);
+
+  return <section className="nearby-facilities">
+    <div className="nearby-intro"><div><span className="mini-label">AROUND ME</span><h2>필요한 곳을 가까이에서 찾아봐유</h2><p>카카오맵에 등록된 장소를 검색 중심에서 가까운 순서로 보여드려요.</p></div><button type="button" onClick={findNearby}>◎ 내 위치 주변</button></div>
+    <div className="nearby-area-tabs" aria-label="검색 지역">{NEARBY_AREAS.map((area) => <button type="button" key={area.key} className={areaKey === area.key ? "active" : ""} onClick={() => chooseArea(area.key)}>{area.label}</button>)}</div>
+    {locationMessage && <p className="nearby-location-message">{locationMessage}</p>}
+    <div className="nearby-category-chips" role="tablist" aria-label="편의시설 분류">{NEARBY_CATEGORIES.map((item) => <button type="button" role="tab" aria-selected={category === item.key} key={item.key} className={category === item.key ? "active" : ""} onClick={() => chooseCategory(item.key)}><span>{item.icon}</span>{item.label}</button>)}</div>
+    <div className="map-panel nearby-map-panel">
+      <div className="real-map gps-map gps-active"><HongseongMap userLocation={center} items={mapItems} onSelect={setSelectedId} focusNearby /></div>
+      <aside className="result-list ranked-place-list"><div className="result-head"><b>{NEARBY_CATEGORIES.find((item) => item.key === category)?.label} 주변</b><span>{loading ? "찾는 중…" : error ? "연결 확인 필요" : `${places.length}곳 · 가까운 순`}</span></div><div className="ranked-place-scroll">
+        {loading ? <div className="nearby-loading"><span /><span /><span /><p>주변 장소를 찾고 있어요</p></div> : error ? <div className="empty-filter-result"><span>🗺️</span><b>장소 검색 연결을 확인해 주세요</b><p>{error}</p></div> : places.length ? places.map((place, index) => <button type="button" key={place.id} className={place.id === selectedId ? "selected-place" : ""} onClick={() => setSelectedId(place.id)}><span className="rank-number">{index + 1}</span><span className="place-icon mint">{iconFor(place.categoryKey)}</span><span><small>{place.category}</small><b>{place.name}</b><p>{place.distance === null ? place.roadAddress || place.address : `${place.distance < 1000 ? `${place.distance}m` : `${(place.distance / 1000).toFixed(1)}km`} · ${place.roadAddress || place.address}`}</p></span></button>) : <div className="empty-filter-result"><span>🔎</span><b>반경 3km에서 찾지 못했어요</b><p>다른 지역이나 분류를 선택해 보세요.</p></div>}
+      </div></aside>
+    </div>
+    <p className="nearby-source-note">장소명·주소·전화번호는 카카오맵 등록 정보입니다. 영업시간과 휴무일은 방문 전에 상세 페이지에서 확인해 주세요.</p>
+    {selected && <div className="modal-backdrop" role="presentation" onMouseDown={() => setSelectedId(null)}><section className="place-detail-modal" role="dialog" aria-modal="true" aria-labelledby="nearby-place-title" onMouseDown={(event) => event.stopPropagation()}><button className="modal-close" type="button" aria-label="닫기" onClick={() => setSelectedId(null)}>×</button><div className="place-detail-emoji">{iconFor(selected.categoryKey)}</div><div className="place-detail-heading"><span>{selected.category}</span><h2 id="nearby-place-title">{selected.name}</h2></div><dl><div><dt>주소</dt><dd>{selected.roadAddress || selected.address || "등록 주소 확인 필요"}</dd></div>{selected.phone && <div><dt>전화</dt><dd><a href={`tel:${selected.phone}`}>{selected.phone}</a></dd></div>}<div><dt>거리</dt><dd>{selected.distance === null ? "검색 중심 기준" : selected.distance < 1000 ? `약 ${selected.distance}m` : `약 ${(selected.distance / 1000).toFixed(1)}km`}</dd></div></dl><div className="place-detail-actions"><a className="primary" href={selected.url} target="_blank" rel="noreferrer">카카오맵에서 보기 ↗</a><button type="button" onClick={() => setSelectedId(null)}>목록으로 돌아가기</button></div><small className="place-detail-note">카카오맵에 등록된 장소입니다. 실제 운영 여부와 영업시간은 방문 전 확인해 주세요.</small></section></div>}
+  </section>;
 }
 
 function CampingGuide() {
@@ -275,10 +365,10 @@ export default function LocalDiscovery({ displayName, signedIn, onRequireLogin }
     <h1>오늘의 홍성을 발견해요</h1>
     <p className="lead">장날과 축제 소식을 챙기고, 참가자가 직접 찾은 맛을 함께 기록해요.</p>
     <div className="discovery-tabs" role="tablist" aria-label="발견 메뉴">
-      {([['around','전체 장소','🗺️'],['markets','오일장','🏮'],['festivals','축제','🎉'],['parking','공영주차장','🅿️'],['reviews','메이트 추천 맛집','🥣'],['recommended','메이트 추천 플레이스','💚'],['hikes','등산','🥾'],['camping','캠핑','⛺']] as const).map(([key,label,icon]) =>
+      {([['around','전체 장소','🗺️'],['nearby','주변 편의시설','🏪'],['markets','오일장','🏮'],['festivals','축제','🎉'],['parking','공영주차장','🅿️'],['reviews','메이트 추천 맛집','🥣'],['recommended','메이트 추천 플레이스','💚'],['hikes','등산','🥾'],['camping','캠핑','⛺']] as const).map(([key,label,icon]) =>
         <button key={key} role="tab" aria-selected={view === key} className={view === key ? "active" : ""} onClick={() => setView(key)}><span>{icon}</span>{label}</button>)}
     </div>
-    {view === "camping" ? <CampingGuide /> : <CategoryMapPanel view={view} />}
+    {view === "camping" ? <CampingGuide /> : view === "nearby" ? <NearbyFacilities /> : <CategoryMapPanel view={view} />}
 
     {view === "around" && <div className="map-panel"><div className={`real-map gps-map ${userLocation ? "gps-active" : "location-pending"}`}>{userLocation ? <HongseongMap userLocation={userLocation} /> : <div className="map-placeholder"><img className="brand-mark brand-icon" src="/brand/hongseong-station-ieum-icon.png" alt="홍성, 이어가유" /><b>내 위치에서 홍성을 발견해요</b><small>노트북은 Wi-Fi 기반 위치를 사용하며, 버튼을 누를 때만 권한을 요청합니다</small><button type="button" className="gps-button" onClick={findMe} disabled={locating}>{locating ? "위치 확인 중…" : "◎ 현재 위치로 보기"}</button>{locationMessage && <><em>{locationMessage}</em><button type="button" className="gps-fallback-button" onClick={() => { setUserLocation(HONGSEONG_CENTER); setLocationMessage(""); }}>홍성읍 기준으로 보기</button></>}</div>}</div><div className="result-list"><div className="result-head"><b>{userLocation ? "내 위치에서 얼마나 걸릴까요?" : `홍성 대표 장소 ${PLACES.length}곳`}</b><span>{userLocation ? `${PLACES.length}곳 · 직선거리 기준` : "위치를 켜면 거리를 표시해요"}</span></div>{PLACES.map((place)=><button key={place.name} className={"special" in place && place.special ? "special-place-row" : ""}><span className="place-icon mint">{place.icon}</span><span><small>{place.category}</small><b>{place.name}</b><p>{userLocation ? `현재 위치에서 약 ${distanceKm(userLocation, place).toFixed(1)}km` : "홍성에서 가볍게 다녀오기 좋은 곳"}</p></span></button>)}</div></div>}
 
