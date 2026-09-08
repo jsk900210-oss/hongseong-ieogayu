@@ -23,46 +23,64 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null) as Record<string, unknown> | null;
-  const productId = clean(body?.productId, 40);
-  const product = PRODUCTS[productId];
-  const quantity = Number(body?.quantity);
   const customerName = clean(body?.customerName, 30);
   const roomNumber = clean(body?.roomNumber, 20);
   const bedNumber = clean(body?.bedNumber, 20);
   const phone = clean(body?.phone, 20);
   const phoneDigits = phone.replace(/\D/g, "");
 
-  if (!product) return NextResponse.json({ error: "주문할 상품을 다시 선택해 주세요." }, { status: 400 });
-  if (product.unitPrice === null) return NextResponse.json({ error: "가격이 확정된 뒤 주문할 수 있어요." }, { status: 409 });
-  if (!Number.isInteger(quantity) || quantity < 1 || quantity > 20) return NextResponse.json({ error: "주문 수량은 1개에서 20개 사이로 입력해 주세요." }, { status: 400 });
   if (!customerName || !roomNumber || !bedNumber || phoneDigits.length < 9 || phoneDigits.length > 11) {
     return NextResponse.json({ error: "주문자, 방 번호, 침대 번호, 전화번호를 정확히 입력해 주세요." }, { status: 400 });
   }
 
+  const rawItems = Array.isArray(body?.items)
+    ? body.items
+    : [{ productId: body?.productId, quantity: body?.quantity }];
+  if (!rawItems.length || rawItems.length > 10) return NextResponse.json({ error: "장바구니 상품을 다시 확인해 주세요." }, { status: 400 });
+
+  const quantities = new Map<string, number>();
+  for (const raw of rawItems) {
+    const item = raw && typeof raw === "object" ? raw as Record<string, unknown> : {};
+    const productId = clean(item.productId, 40);
+    const quantity = Number(item.quantity);
+    if (!PRODUCTS[productId]) return NextResponse.json({ error: "장바구니에 주문할 수 없는 상품이 있어요." }, { status: 400 });
+    if (!Number.isInteger(quantity) || quantity < 1 || quantity > 20) return NextResponse.json({ error: "상품별 주문 수량은 1개에서 20개 사이로 선택해 주세요." }, { status: 400 });
+    quantities.set(productId, (quantities.get(productId) ?? 0) + quantity);
+  }
+
+  const orderItems = [...quantities].map(([productId, quantity]) => ({ productId, quantity, product: PRODUCTS[productId] }));
+  if (orderItems.some((item) => item.quantity > 20)) return NextResponse.json({ error: "상품별 주문 수량은 최대 20개입니다." }, { status: 400 });
+  if (orderItems.some((item) => item.product.unitPrice === null)) return NextResponse.json({ error: "가격이 확정되지 않은 상품이 장바구니에 있어요." }, { status: 409 });
+
   const db = getDb();
-  if (product.stock) {
-    const reserved = await db.select({ quantity: sql<number>`coalesce(sum(${marketOrders.quantity}), 0)` }).from(marketOrders).where(and(eq(marketOrders.productId, productId), notInArray(marketOrders.status, ["payment_canceled"])));
-    if (Number(reserved[0]?.quantity ?? 0) + quantity > product.stock) {
+  for (const item of orderItems) {
+    if (!item.product.stock) continue;
+    const reserved = await db.select({ quantity: sql<number>`coalesce(sum(${marketOrders.quantity}), 0)` }).from(marketOrders).where(and(eq(marketOrders.productId, item.productId), notInArray(marketOrders.status, ["payment_canceled"])));
+    if (Number(reserved[0]?.quantity ?? 0) + item.quantity > item.product.stock) {
       return NextResponse.json({ error: "남은 예정 수량보다 많이 주문할 수 없어요." }, { status: 409 });
     }
   }
 
   const user = await getGoogleUser();
-  const created = await db.insert(marketOrders).values({
+  const orderGroupCode = `HM-${Date.now().toString(36).toUpperCase()}-${crypto.randomUUID().slice(0, 4).toUpperCase()}`;
+  const created = await db.insert(marketOrders).values(orderItems.map((item) => ({
     userId: user?.id ?? null,
-    productId,
-    productName: product.name,
-    unitPrice: product.unitPrice,
-    quantity,
+    orderGroupCode,
+    productId: item.productId,
+    productName: item.product.name,
+    unitPrice: item.product.unitPrice!,
+    quantity: item.quantity,
     customerName,
     roomNumber,
     bedNumber,
     phone,
     status: "payment_pending",
-  }).returning({ id: marketOrders.id, status: marketOrders.status });
+  }))).returning({ id: marketOrders.id, status: marketOrders.status });
+
+  const totalPrice = orderItems.reduce((sum, item) => sum + item.product.unitPrice! * item.quantity, 0);
 
   return NextResponse.json({
-    order: { ...created[0], totalPrice: product.unitPrice * quantity },
+    order: { ...created[0], orderIds: created.map((item) => item.id), orderCode: orderGroupCode, totalPrice, itemCount: orderItems.length },
     paymentMode: "bank_transfer",
   });
 }
@@ -76,12 +94,15 @@ export async function PATCH(request: Request) {
   const id = Number(body?.id);
   if (!Number.isInteger(id) || id < 1) return NextResponse.json({ error: "주문 번호가 올바르지 않아요." }, { status: 400 });
 
-  const updated = await getDb().update(marketOrders)
+  const db = getDb();
+  const target = await db.select({ orderGroupCode: marketOrders.orderGroupCode }).from(marketOrders).where(eq(marketOrders.id, id)).limit(1);
+  if (!target.length) return NextResponse.json({ error: "주문을 찾지 못했어요." }, { status: 404 });
+
+  const updated = await db.update(marketOrders)
     .set({ status: "completed", confirmedAt: new Date() })
-    .where(eq(marketOrders.id, id))
+    .where(target[0].orderGroupCode ? eq(marketOrders.orderGroupCode, target[0].orderGroupCode) : eq(marketOrders.id, id))
     .returning({ id: marketOrders.id, status: marketOrders.status, confirmedAt: marketOrders.confirmedAt });
-  if (!updated.length) return NextResponse.json({ error: "주문을 찾지 못했어요." }, { status: 404 });
-  return NextResponse.json({ order: updated[0] });
+  return NextResponse.json({ order: { ...updated[0], ids: updated.map((item) => item.id) } });
 }
 
 async function isMaster(userId: string) {

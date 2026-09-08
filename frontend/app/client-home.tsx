@@ -30,8 +30,8 @@ type IeumiSource = { label: string; url: string };
 type IeumiMessage = { id: number; role: "ieumi" | "user"; text: string; action?: Tab; actionLabel?: string; sources?: IeumiSource[] };
 type MarketList = "arrival" | "available" | "orders";
 type MarketProduct = { id: string; name: string; icon: string; unitPrice: number | null; availability: string; stock?: string };
-type MarketOrder = { id: number; productName: string; unitPrice: number; quantity: number; customerName: string; roomNumber: string; bedNumber: string; phone: string; status: string; tossPaymentStatus?: string | null; createdAt: string; confirmedAt: string | null };
-type MarketCheckout = { orderId: number; totalPrice: number };
+type MarketOrder = { id: number; orderGroupCode?: string | null; productName: string; unitPrice: number; quantity: number; customerName: string; roomNumber: string; bedNumber: string; phone: string; status: string; createdAt: string; confirmedAt: string | null };
+type MarketCheckout = { orderCode: string; totalPrice: number; itemCount: number };
 
 const MARKET_BANK_ACCOUNT = {
   bank: "국민은행",
@@ -101,8 +101,9 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
   const [creatingJoin, setCreatingJoin] = useState(false);
   const [showMiniMarket, setShowMiniMarket] = useState(false);
   const [marketList, setMarketList] = useState<MarketList>("arrival");
-  const [selectedMarketProduct, setSelectedMarketProduct] = useState<MarketProduct | null>(null);
-  const [marketOrderDraft, setMarketOrderDraft] = useState({ quantity: "1", customerName: user?.displayName ?? "", roomNumber: "", bedNumber: "", phone: "" });
+  const [marketCart, setMarketCart] = useState<Record<string, number>>({});
+  const [showMarketCart, setShowMarketCart] = useState(false);
+  const [marketOrderDraft, setMarketOrderDraft] = useState({ customerName: user?.displayName ?? "", roomNumber: "", bedNumber: "", phone: "" });
   const [submittingMarketOrder, setSubmittingMarketOrder] = useState(false);
   const [marketCheckout, setMarketCheckout] = useState<MarketCheckout | null>(null);
   const [marketOrders, setMarketOrders] = useState<MarketOrder[]>([]);
@@ -136,6 +137,19 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
     () => scheduledJoins.filter((item) => keyword === "전체" || item.keyword === keyword),
     [scheduledJoins, keyword],
   );
+  const marketCartItems = useMemo(() => MARKET_PRODUCTS
+    .filter((product) => (marketCart[product.id] ?? 0) > 0 && product.unitPrice !== null)
+    .map((product) => ({ ...product, quantity: marketCart[product.id] })), [marketCart]);
+  const marketCartCount = marketCartItems.reduce((sum, item) => sum + item.quantity, 0);
+  const marketCartTotal = marketCartItems.reduce((sum, item) => sum + (item.unitPrice ?? 0) * item.quantity, 0);
+  const marketOrderGroups = useMemo(() => {
+    const groups = new Map<string, MarketOrder[]>();
+    for (const order of marketOrders) {
+      const key = order.orderGroupCode || `legacy-${order.id}`;
+      groups.set(key, [...(groups.get(key) ?? []), order]);
+    }
+    return [...groups.entries()].map(([code, orders]) => ({ code, orders, first: orders[0] }));
+  }, [marketOrders]);
 
   useEffect(() => {
     fetch("/api/joins")
@@ -331,32 +345,50 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
     setToast("Join을 삭제했어요.");
   };
 
-  const openMarketOrder = (product: MarketProduct) => {
+  const addMarketProduct = (product: MarketProduct) => {
     if (product.unitPrice === null) {
       setToast("가격이 확정된 뒤 주문할 수 있어요.");
       window.setTimeout(() => setToast(""), 2200);
       return;
     }
-    setSelectedMarketProduct(product);
-    setMarketOrderDraft((current) => ({ ...current, quantity: "1", customerName: current.customerName || displayName || user?.displayName || "" }));
+    setMarketCart((current) => ({ ...current, [product.id]: Math.min(20, (current[product.id] ?? 0) + 1) }));
+    setToast(`${product.name}을 장바구니에 담았어요.`);
+    window.setTimeout(() => setToast(""), 1400);
+  };
+
+  const changeMarketCartQuantity = (productId: string, change: number) => {
+    setMarketCart((current) => {
+      const nextQuantity = Math.max(0, Math.min(20, (current[productId] ?? 0) + change));
+      const next = { ...current };
+      if (nextQuantity) next[productId] = nextQuantity;
+      else delete next[productId];
+      return next;
+    });
+  };
+
+  const openMarketCart = () => {
+    if (!marketCartItems.length) return;
+    setMarketOrderDraft((current) => ({ ...current, customerName: current.customerName || displayName || user?.displayName || "" }));
     setShowMiniMarket(false);
+    setShowMarketCart(true);
   };
 
   const submitMarketOrder = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!selectedMarketProduct) return;
+    if (!marketCartItems.length) return;
     setSubmittingMarketOrder(true);
-    const response = await fetch("/api/market-orders", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ productId: selectedMarketProduct.id, ...marketOrderDraft }) });
-    const result = await response.json() as { order?: { id: number; totalPrice: number }; error?: string };
+    const response = await fetch("/api/market-orders", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ items: marketCartItems.map((item) => ({ productId: item.id, quantity: item.quantity })), ...marketOrderDraft }) });
+    const result = await response.json() as { order?: { orderCode: string; totalPrice: number; itemCount: number }; error?: string };
     setSubmittingMarketOrder(false);
     if (!response.ok || !result.order) {
       setToast(result.error ?? "주문을 접수하지 못했어요.");
       window.setTimeout(() => setToast(""), 2400);
       return;
     }
-    setSelectedMarketProduct(null);
-    setMarketOrderDraft((current) => ({ ...current, quantity: "1", roomNumber: "", bedNumber: "", phone: "" }));
-    setMarketCheckout({ orderId: result.order.id, totalPrice: result.order.totalPrice });
+    setShowMarketCart(false);
+    setMarketCart({});
+    setMarketOrderDraft((current) => ({ ...current, roomNumber: "", bedNumber: "", phone: "" }));
+    setMarketCheckout({ orderCode: result.order.orderCode, totalPrice: result.order.totalPrice, itemCount: result.order.itemCount });
   };
 
   const copyMarketAccount = async () => {
@@ -380,12 +412,13 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
 
   const confirmMarketOrder = async (id: number) => {
     const response = await fetch("/api/market-orders", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ id }) });
-    const result = await response.json() as { order?: { id: number; status: string; confirmedAt: string }; error?: string };
+    const result = await response.json() as { order?: { id: number; ids: number[]; status: string; confirmedAt: string }; error?: string };
     if (!response.ok || !result.order) {
       setToast(result.error ?? "입금 확인을 반영하지 못했어요.");
       return;
     }
-    setMarketOrders((current) => current.map((order) => order.id === id ? { ...order, status: "completed", confirmedAt: result.order!.confirmedAt } : order));
+    const completedIds = new Set(result.order.ids);
+    setMarketOrders((current) => current.map((order) => completedIds.has(order.id) ? { ...order, status: "completed", confirmedAt: result.order!.confirmedAt } : order));
     setToast("입금 확인 후 주문 완료로 변경했어요.");
     window.setTimeout(() => setToast(""), 2200);
   };
@@ -434,9 +467,9 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
 
   const renderMarketProduct = (product: MarketProduct) => (
     <li key={product.id}>
-      <button type="button" disabled={product.unitPrice === null} onClick={() => openMarketOrder(product)}>
+      <button type="button" disabled={product.unitPrice === null} onClick={() => addMarketProduct(product)}>
         <span className="market-product-icon">{product.icon}</span>
-        <div><b>{product.name}</b><small>{product.unitPrice === null ? "가격 확정 후 주문 가능" : `${product.availability} · 눌러서 주문`}</small></div>
+        <div><b>{product.name}</b><small>{product.unitPrice === null ? "가격 확정 후 주문 가능" : `${product.availability} · 장바구니 담기${marketCart[product.id] ? ` · ${marketCart[product.id]}개 담음` : ""}`}</small></div>
         <strong className={product.unitPrice === null ? "price-pending" : ""}>{product.unitPrice === null ? "가격 미정" : `${product.unitPrice.toLocaleString("ko-KR")}원`}{product.stock && <small>{product.stock}</small>}</strong>
       </button>
     </li>
@@ -444,8 +477,8 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
 
   const renderMarketPanel = () => {
     if (marketList === "available") return <div className="market-list-panel" role="tabpanel"><div className="market-empty"><span>🧺</span><b>현재 바로 구매 가능한 상품이 없어요.</b><p>상품이 입고되면 가격과 남은 수량, 구매 버튼이 여기에 표시됩니다.</p></div></div>;
-    if (marketList === "orders") return <div className="market-list-panel market-order-admin" role="tabpanel">{loadingMarketOrders ? <p className="market-order-loading">주문 내역을 불러오는 중이에요…</p> : marketOrders.length ? <ul>{marketOrders.map((order) => <li key={order.id}><div className="market-order-head"><b>#{order.id} · {order.productName}</b><span className={marketOrderState(order.status).className}>{marketOrderState(order.status).label}</span></div><p>{order.quantity}개 · {(order.unitPrice * order.quantity).toLocaleString("ko-KR")}원</p><dl><div><dt>주문자</dt><dd>{order.customerName}</dd></div><div><dt>숙소</dt><dd>{order.roomNumber} / 침대 {order.bedNumber}</dd></div><div><dt>전화</dt><dd><a href={`tel:${order.phone}`}>{order.phone}</a></dd></div></dl>{order.status !== "completed" && order.status !== "payment_canceled" && <button type="button" onClick={() => confirmMarketOrder(order.id)}>수동 입금 확인 · 주문 완료</button>}</li>)}</ul> : <div className="market-empty"><span>🧾</span><b>아직 접수된 주문이 없어요.</b><p>새 주문이 들어오면 이곳에서 입금을 확인할 수 있어요.</p></div>}</div>;
-    return <div className="market-list-panel" role="tabpanel"><div className="market-product-group"><h3><span>♻️</span> 상시주문 <small>오후 6시 주문 마감</small></h3><p className="market-ordering-story"><b>오늘 오후 6시까지 주문하면 다음 날 받아보실 수 있어요.</b><span>가까운 지역 농부가 자신의 이름을 걸고 직접 재배한 제품을 로컬마켓까지 가져다줍니다.</span></p><ul className="market-product-list">{MARKET_PRODUCTS.filter((product) => product.availability === "상시주문").map(renderMarketProduct)}</ul></div><div className="market-product-group"><h3><span>📅</span> 내일 입고 예정 <small>총 20개 예정</small></h3><ul className="market-product-list">{MARKET_PRODUCTS.filter((product) => product.availability === "내일 입고 예정").map(renderMarketProduct)}</ul></div></div>;
+    if (marketList === "orders") return <div className="market-list-panel market-order-admin" role="tabpanel">{loadingMarketOrders ? <p className="market-order-loading">주문 내역을 불러오는 중이에요…</p> : marketOrderGroups.length ? <ul>{marketOrderGroups.map((group) => { const total = group.orders.reduce((sum, order) => sum + order.unitPrice * order.quantity, 0); const state = marketOrderState(group.first.status); return <li key={group.code}><div className="market-order-head"><b>{group.first.orderGroupCode || `#${group.first.id}`}</b><span className={state.className}>{state.label}</span></div><ul className="market-order-items">{group.orders.map((order) => <li key={order.id}><span>{order.productName} × {order.quantity}</span><b>{(order.unitPrice * order.quantity).toLocaleString("ko-KR")}원</b></li>)}</ul><p>총 {total.toLocaleString("ko-KR")}원</p><dl><div><dt>주문자</dt><dd>{group.first.customerName}</dd></div><div><dt>숙소</dt><dd>{group.first.roomNumber} / 침대 {group.first.bedNumber}</dd></div><div><dt>전화</dt><dd><a href={`tel:${group.first.phone}`}>{group.first.phone}</a></dd></div></dl>{group.first.status !== "completed" && group.first.status !== "payment_canceled" && <button type="button" onClick={() => confirmMarketOrder(group.first.id)}>입금 확인 · 묶음 주문 완료</button>}</li>; })}</ul> : <div className="market-empty"><span>🧾</span><b>아직 접수된 주문이 없어요.</b><p>새 주문이 들어오면 이곳에서 입금을 확인할 수 있어요.</p></div>}</div>;
+    return <div className="market-list-panel" role="tabpanel"><div className="market-product-group"><h3><span>♻️</span> 상시주문 <small>오후 6시 주문 마감</small></h3><p className="market-ordering-story"><b>오늘 오후 6시까지 주문하면 다음 날 받아보실 수 있어요.</b><span>가까운 지역 농부가 자신의 이름을 걸고 직접 재배한 제품을 로컬마켓까지 가져다줍니다.</span></p><ul className="market-product-list">{MARKET_PRODUCTS.filter((product) => product.availability === "상시주문").map(renderMarketProduct)}</ul></div><div className="market-product-group"><h3><span>📅</span> 내일 입고 예정 <small>총 20개 예정</small></h3><ul className="market-product-list">{MARKET_PRODUCTS.filter((product) => product.availability === "내일 입고 예정").map(renderMarketProduct)}</ul></div><div className={`market-cart-bar${marketCartCount ? " has-items" : ""}`}><span>🛒 장바구니 <b>{marketCartCount}개 · {marketCartTotal.toLocaleString("ko-KR")}원</b></span><button type="button" disabled={!marketCartCount} onClick={openMarketCart}>한 번에 주문하기</button></div></div>;
   };
 
   return (
@@ -538,8 +571,8 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
       <nav className="mobile-nav" aria-label="주요 메뉴"><button className={tab === "home" ? "active" : ""} onClick={()=>move("home")}><span>🏠</span>홈</button><button className={tab === "place" ? "active" : ""} onClick={()=>move("place")}><span>🗺️</span>발견</button><button className="market-tab" type="button" onClick={()=>setShowMiniMarket(true)}><span>🧺</span>로컬마켓</button><button className="join-fab" onClick={()=>move("join")}><span>＋</span>Join</button><button className={tab === "profile" ? "active" : ""} onClick={()=>move("profile")}><span>👤</span>프로필</button></nav>
 
       {showMiniMarket && <div className="modal-backdrop" role="presentation" onMouseDown={() => setShowMiniMarket(false)}><section className="market-modal" role="dialog" aria-modal="true" aria-labelledby="market-title" onMouseDown={(event) => event.stopPropagation()}><button className="modal-close" type="button" aria-label="닫기" onClick={() => setShowMiniMarket(false)}>×</button><span className="mini-label">HONGSEONG LOCAL MARKET</span><h2 id="market-title">홍성 로컬마켓</h2><p className="market-lead">상품을 누르면 수량과 수령 정보를 입력해 주문할 수 있어요. 계좌이체 입금 확인 후 주문이 완료됩니다.</p><div className={`market-list-tabs ${profileMeta.memberType === "master" ? "has-admin" : ""}`} role="tablist" aria-label="로컬마켓 상품 목록"><button type="button" role="tab" aria-selected={marketList === "arrival"} className={marketList === "arrival" ? "active" : ""} onClick={() => setMarketList("arrival")}><span>📦</span><b>상시주문 &amp; 입고예정</b><small>5개 품목</small></button><button type="button" role="tab" aria-selected={marketList === "available"} className={marketList === "available" ? "active" : ""} onClick={() => setMarketList("available")}><span>🛒</span><b>바로 구매</b><small>현재 0개 품목</small></button>{profileMeta.memberType === "master" && <button type="button" role="tab" aria-selected={marketList === "orders"} className={marketList === "orders" ? "active" : ""} onClick={openMarketOrderManagement}><span>🧾</span><b>주문 관리</b><small>입금 확인</small></button>}</div>{renderMarketPanel()}<aside className="market-shared-guide" aria-label="공용주방 이용 안내"><article><span>🧂</span><div><b>공용주방 기본양념</b><p>간장 · 소금 · 설탕 · 다시다 · 식용유</p></div></article><article><span>🧺</span><div><b>공용 식재료 사용 안내</b><p>냉장·냉동 모두 공용 바구니 안에 담긴 야채와 식재료만 사용할 수 있어요.</p></div></article></aside><div className="market-flow" aria-label="로컬마켓 이용 순서"><span><b>1</b>상품·수량 선택</span><i>→</i><span><b>2</b>주문 정보 입력</span><i>→</i><span><b>3</b>입금 확인 후 완료</span></div><p className="market-footnote">시범 운영 중이며, 품목·수량은 실제 입고 상황에 따라 달라질 수 있어요.</p></section></div>}
-      {selectedMarketProduct && <div className="modal-backdrop" role="presentation" onMouseDown={() => setSelectedMarketProduct(null)}><section className="market-order-modal" role="dialog" aria-modal="true" aria-labelledby="market-order-title" onMouseDown={(event) => event.stopPropagation()}><button className="modal-close" type="button" aria-label="닫기" onClick={() => { setSelectedMarketProduct(null); setShowMiniMarket(true); }}>×</button><span className="mini-label">LOCAL MARKET ORDER</span><div className="market-order-product"><span>{selectedMarketProduct.icon}</span><div><small>{selectedMarketProduct.availability}</small><h2 id="market-order-title">{selectedMarketProduct.name}</h2><b>{selectedMarketProduct.unitPrice?.toLocaleString("ko-KR")}원</b></div></div><form onSubmit={submitMarketOrder}><label>주문 수량<input required type="number" min="1" max="20" inputMode="numeric" value={marketOrderDraft.quantity} onChange={(event) => setMarketOrderDraft({ ...marketOrderDraft, quantity: event.target.value })}/></label><label>주문자<input required maxLength={30} autoComplete="name" value={marketOrderDraft.customerName} onChange={(event) => setMarketOrderDraft({ ...marketOrderDraft, customerName: event.target.value })} placeholder="이름을 입력해 주세요"/></label><div className="market-order-room"><label>방 번호<input required maxLength={20} value={marketOrderDraft.roomNumber} onChange={(event) => setMarketOrderDraft({ ...marketOrderDraft, roomNumber: event.target.value })} placeholder="예: 201호"/></label><label>침대 번호<input required maxLength={20} value={marketOrderDraft.bedNumber} onChange={(event) => setMarketOrderDraft({ ...marketOrderDraft, bedNumber: event.target.value })} placeholder="예: A"/></label></div><label>전화번호<input required type="tel" maxLength={20} autoComplete="tel" inputMode="tel" value={marketOrderDraft.phone} onChange={(event) => setMarketOrderDraft({ ...marketOrderDraft, phone: event.target.value })} placeholder="010-0000-0000"/></label><div className="market-order-total"><span>결제 예정 금액</span><b>{((selectedMarketProduct.unitPrice ?? 0) * Math.max(1, Number(marketOrderDraft.quantity) || 1)).toLocaleString("ko-KR")}원</b></div><p>주문 접수 후 아래 계좌로 이체해 주세요. 입금이 확인되면 주문이 완료돼요.</p><button className="primary" type="submit" disabled={submittingMarketOrder}>{submittingMarketOrder ? "주문 접수 중…" : "계좌이체 주문 접수하기"}</button></form></section></div>}
-      {marketCheckout && <div className="modal-backdrop" role="presentation" onMouseDown={() => setMarketCheckout(null)}><section className="market-checkout-modal" role="dialog" aria-modal="true" aria-labelledby="market-checkout-title" onMouseDown={(event) => event.stopPropagation()}><button className="modal-close" type="button" aria-label="닫기" onClick={() => setMarketCheckout(null)}>×</button><span className="market-checkout-icon">🏦</span><span className="mini-label">ORDER #{marketCheckout.orderId}</span><h2 id="market-checkout-title">주문이 접수됐어요</h2><div className="market-checkout-total"><span>입금할 금액</span><b>{marketCheckout.totalPrice.toLocaleString("ko-KR")}원</b></div><div className="market-bank-account"><span>{MARKET_BANK_ACCOUNT.bank}</span><b>{MARKET_BANK_ACCOUNT.number}</b><small>예금주 {MARKET_BANK_ACCOUNT.holder}</small></div><button className="account-copy-button" type="button" onClick={copyMarketAccount}>계좌번호 복사</button><p>주문자 이름으로 입금해 주세요. 운영자가 입금을 확인하면 주문 완료로 변경됩니다.</p><button className="primary secondary" type="button" onClick={() => setMarketCheckout(null)}>확인</button></section></div>}
+      {showMarketCart && <div className="modal-backdrop" role="presentation" onMouseDown={() => setShowMarketCart(false)}><section className="market-order-modal market-cart-modal" role="dialog" aria-modal="true" aria-labelledby="market-cart-title" onMouseDown={(event) => event.stopPropagation()}><button className="modal-close" type="button" aria-label="닫기" onClick={() => { setShowMarketCart(false); setShowMiniMarket(true); }}>×</button><span className="mini-label">LOCAL MARKET CART</span><h2 id="market-cart-title">장바구니 한 번에 주문하기</h2><ul className="market-cart-items">{marketCartItems.map((item) => <li key={item.id}><span className="market-product-icon">{item.icon}</span><div><b>{item.name}</b><small>{((item.unitPrice ?? 0) * item.quantity).toLocaleString("ko-KR")}원</small></div><div className="market-cart-quantity"><button type="button" aria-label={`${item.name} 수량 줄이기`} onClick={() => changeMarketCartQuantity(item.id, -1)}>−</button><b>{item.quantity}</b><button type="button" aria-label={`${item.name} 수량 늘리기`} onClick={() => changeMarketCartQuantity(item.id, 1)}>＋</button></div></li>)}</ul><form onSubmit={submitMarketOrder}><label>주문자<input required maxLength={30} autoComplete="name" value={marketOrderDraft.customerName} onChange={(event) => setMarketOrderDraft({ ...marketOrderDraft, customerName: event.target.value })} placeholder="이름을 입력해 주세요"/></label><div className="market-order-room"><label>방 번호<input required maxLength={20} value={marketOrderDraft.roomNumber} onChange={(event) => setMarketOrderDraft({ ...marketOrderDraft, roomNumber: event.target.value })} placeholder="예: 201호"/></label><label>침대 번호<input required maxLength={20} value={marketOrderDraft.bedNumber} onChange={(event) => setMarketOrderDraft({ ...marketOrderDraft, bedNumber: event.target.value })} placeholder="예: A"/></label></div><label>전화번호<input required type="tel" maxLength={20} autoComplete="tel" inputMode="tel" value={marketOrderDraft.phone} onChange={(event) => setMarketOrderDraft({ ...marketOrderDraft, phone: event.target.value })} placeholder="010-0000-0000"/></label><div className="market-order-total"><span>{marketCartCount}개 상품 합계</span><b>{marketCartTotal.toLocaleString("ko-KR")}원</b></div><p>주문 접수 후 합계 금액을 한 번에 계좌이체해 주세요.</p><button className="primary" type="submit" disabled={submittingMarketOrder || !marketCartCount}>{submittingMarketOrder ? "묶음 주문 접수 중…" : "장바구니 주문 접수하기"}</button></form></section></div>}
+      {marketCheckout && <div className="modal-backdrop" role="presentation" onMouseDown={() => setMarketCheckout(null)}><section className="market-checkout-modal" role="dialog" aria-modal="true" aria-labelledby="market-checkout-title" onMouseDown={(event) => event.stopPropagation()}><button className="modal-close" type="button" aria-label="닫기" onClick={() => setMarketCheckout(null)}>×</button><span className="market-checkout-icon">🏦</span><span className="mini-label">ORDER {marketCheckout.orderCode}</span><h2 id="market-checkout-title">묶음 주문이 접수됐어요</h2><p className="market-checkout-count">상품 {marketCheckout.itemCount}종을 한 번에 결제해 주세요.</p><div className="market-checkout-total"><span>입금할 합계 금액</span><b>{marketCheckout.totalPrice.toLocaleString("ko-KR")}원</b></div><div className="market-bank-account"><span>{MARKET_BANK_ACCOUNT.bank}</span><b>{MARKET_BANK_ACCOUNT.number}</b><small>예금주 {MARKET_BANK_ACCOUNT.holder}</small></div><button className="account-copy-button" type="button" onClick={copyMarketAccount}>계좌번호 복사</button><p>주문자 이름으로 합계 금액을 한 번만 입금해 주세요. 운영자가 입금을 확인하면 장바구니 상품이 함께 주문 완료됩니다.</p><button className="primary secondary" type="button" onClick={() => setMarketCheckout(null)}>확인</button></section></div>}
       {creatingJoin && <div className="modal-backdrop" role="presentation" onMouseDown={() => setCreatingJoin(false)}><section className="join-modal" role="dialog" aria-modal="true" aria-labelledby="join-create-title" onMouseDown={(event) => event.stopPropagation()}><button className="modal-close" type="button" aria-label="닫기" onClick={() => setCreatingJoin(false)}>×</button><span className="mini-label">NEW JOIN</span><h2 id="join-create-title">새로운 Join 만들기</h2><p>함께하고 싶은 일정과 모집 내용을 알려주세요.</p><form onSubmit={saveJoin}><label>제목<input required maxLength={40} value={joinDraft.title} onChange={(event) => setJoinDraft({...joinDraft, title:event.target.value})} placeholder="예: 함께 오름 일몰 보러 가요" /></label><label>소개<textarea required maxLength={300} rows={4} value={joinDraft.description} onChange={(event) => setJoinDraft({...joinDraft, description:event.target.value})} placeholder="어떤 시간을 함께 보내고 싶은지 적어주세요" /></label><div className="form-grid"><label>장소<input required maxLength={60} value={joinDraft.location} onChange={(event) => setJoinDraft({...joinDraft, location:event.target.value})} placeholder="만나는 장소" /></label><label>주제<select value={joinDraft.keyword} onChange={(event) => setJoinDraft({...joinDraft, keyword:event.target.value})}><option>여행</option><option>맛집</option><option>산책</option><option>액티비티</option><option>기타</option></select></label><label>날짜<input required type="date" value={joinDraft.date} onChange={(event) => setJoinDraft({...joinDraft, date:event.target.value})} /></label><label>시간<input required type="time" value={joinDraft.time} onChange={(event) => setJoinDraft({...joinDraft, time:event.target.value})} /></label><label>모집 인원<input required type="number" min={2} max={20} value={joinDraft.max} onChange={(event) => setJoinDraft({...joinDraft, max:event.target.value})} /></label></div><button className="primary submit-join" type="submit" disabled={savingJoin}>{savingJoin ? "등록 중…" : "Join 등록하기"}</button></form></section></div>}
       {editingNickname && <div className="modal-backdrop" role="presentation" onMouseDown={() => setEditingNickname(false)}><section className="nickname-modal" role="dialog" aria-modal="true" aria-labelledby="nickname-title" onMouseDown={(event) => event.stopPropagation()}><button className="modal-close" type="button" aria-label="닫기" onClick={() => setEditingNickname(false)}>×</button><span className="mini-label">MY PROFILE</span><h2 id="nickname-title">닉네임 바꾸기</h2><p>Join과 프로필에 표시할 이름을 정해 주세요.</p><form onSubmit={saveNickname}><label htmlFor="nickname">닉네임</label><input id="nickname" autoFocus minLength={2} maxLength={20} value={nicknameDraft} onChange={(event) => setNicknameDraft(event.target.value)} placeholder="2~20자로 입력" /><small>{nicknameDraft.trim().length}/20</small><button className="primary" type="submit" disabled={savingNickname || nicknameDraft.trim().length < 2}>{savingNickname ? "저장 중…" : "닉네임 저장"}</button></form></section></div>}
       {activeChat && <div className="modal-backdrop" role="presentation" onMouseDown={() => setActiveChat(null)}><section className="join-chat-modal" role="dialog" aria-modal="true" aria-label={`${activeChat.title} 채팅`} onMouseDown={(event) => event.stopPropagation()}><button className="modal-close" type="button" aria-label="닫기" onClick={() => setActiveChat(null)}>×</button><span className="mini-label">JOIN CHAT · 참여자 전용</span><h2>{activeChat.title}</h2><p>이 채팅은 Join 호스트와 참여자만 볼 수 있어요.</p><div className="join-message-list">{messages.length ? messages.map((message) => <div key={message.id}><b>{message.displayName}</b><span>{message.body}</span><small>{new Date(message.createdAt).toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}</small></div>) : <em>아직 대화가 없어요. 먼저 인사를 건네 보세요.</em>}</div><form className="join-message-form" onSubmit={sendMessage}><input value={messageDraft} maxLength={500} onChange={(event) => setMessageDraft(event.target.value)} placeholder="참여자에게 메시지 보내기" /><button type="submit" disabled={sendingMessage || !messageDraft.trim()}>{sendingMessage ? "전송 중" : "보내기"}</button></form></section></div>}

@@ -186,6 +186,7 @@ export const marketOrders = sqliteTable("market_orders", {
   roomNumber: text("room_number").notNull(),
   bedNumber: text("bed_number").notNull(),
   phone: text("phone").notNull(),
+  orderGroupCode: text("order_group_code"),
   status: text("status").notNull().default("payment_pending"),
   tossProductKey: text("toss_product_key"),
   tossOrderKey: text("toss_order_key"),
