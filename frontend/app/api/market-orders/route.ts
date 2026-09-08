@@ -3,7 +3,6 @@ import { NextResponse } from "next/server";
 import { getDb } from "../../../db";
 import { marketOrders, users } from "../../../db/schema";
 import { getGoogleUser } from "../../google-auth";
-import { createLinkPayProduct, isLinkPayConfigured } from "../toss/linkpay";
 
 const PRODUCTS: Record<string, { name: string; unitPrice: number | null; stock?: number }> = {
   "shine-muscat-3kg": { name: "고당도 샤인머스켓 3kg", unitPrice: 45000 },
@@ -62,31 +61,9 @@ export async function POST(request: Request) {
     status: "payment_pending",
   }).returning({ id: marketOrders.id, status: marketOrders.status });
 
-  const order = created[0];
-  let paymentUrl: string | null = null;
-  if (order && isLinkPayConfigured()) {
-    try {
-      const linkPay = await createLinkPayProduct({
-        orderId: order.id,
-        name: `${product.name} ${quantity}개`,
-        amount: product.unitPrice * quantity,
-      });
-      if (linkPay) {
-        paymentUrl = linkPay.paymentUrl;
-        await db.update(marketOrders).set({
-          tossProductKey: linkPay.productKey,
-          paymentUrl: linkPay.paymentUrl,
-          tossPaymentStatus: "WAITING_FOR_PAYMENT",
-        }).where(eq(marketOrders.id, order.id));
-      }
-    } catch (error) {
-      console.error("Could not create Toss LinkPay product", error);
-    }
-  }
-
   return NextResponse.json({
-    order: { ...order, totalPrice: product.unitPrice * quantity, paymentUrl },
-    paymentMode: paymentUrl ? "toss_linkpay" : "manual_transfer",
+    order: { ...created[0], totalPrice: product.unitPrice * quantity },
+    paymentMode: "bank_transfer",
   });
 }
 

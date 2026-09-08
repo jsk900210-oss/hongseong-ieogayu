@@ -66,8 +66,6 @@ KAKAO_REST_API_KEY=
 
 `KAKAO_REST_API_KEY`는 카카오디벨로퍼스 앱의 REST API 키입니다. 주변 편의시설 화면은 홍성읍·내포·광천·남당항 또는 홍성군 안의 현재 위치를 중심으로 반경 3km의 등록 장소를 검색합니다. 키는 코드나 GitHub에 커밋하지 말고 로컬 `.env.local`과 배포 환경의 비밀 변수에만 등록합니다.
 
-`TOSS_LINKPAY_SECRET_KEY`는 토스페이먼츠 링크페이 계약·심사 후 발급된 서버용 비밀키입니다. 이 값이 있으면 로컬마켓 주문별 결제 링크가 자동 생성되고, 값이 없으면 기존 운영자 수동 입금 확인 방식으로 접수됩니다. 비밀키는 GitHub에 커밋하거나 브라우저 코드에 넣지 않습니다.
-
 Google OAuth 승인 리디렉션 URI에는 로컬 주소를 등록합니다.
 
 ```text
@@ -124,19 +122,14 @@ docs/                     # 서비스·API 참고 문서
 
 현재 라이브 데모는 Codex Sites 배포를 사용합니다. GitHub에 `main` 브랜치로 소스를 올린 뒤, `frontend`에서 빌드가 성공한 상태로 새 버전을 배포합니다.
 
-### 토스페이먼츠 링크페이 연결
+### 로컬마켓 계좌이체
 
-1. [링크페이 도입 문의](https://builder.tosspayments.com/to/efa977a3cd8b4f61b31c46ade8d9e2c9)를 제출하고 계약·가맹점 심사를 완료합니다.
-2. 발급된 서버용 비밀키를 로컬 `frontend/.env.local`과 배포 환경의 `TOSS_LINKPAY_SECRET_KEY` 비밀 변수에 등록합니다.
-3. 토스페이먼츠 개발자센터에 아래 웹훅 URL과 `ORDER_PAYMENT_STATUS_CHANGED` 이벤트를 등록합니다.
+로컬마켓 주문은 주문 접수 후 아래 계좌로 이체하고, Master가 입금을 확인하면 완료됩니다.
 
-   ```text
-   https://hongseongmate.ep01-sleepwar.chatgpt.site/api/toss/linkpay-webhook
-   ```
-
-4. 먼저 테스트 키로 주문 → 링크 열기 → 결제 → Master 주문 관리의 `결제·주문 완료` 표시까지 확인한 뒤 라이브 키로 교체합니다.
-
-웹훅은 받은 값을 그대로 신뢰하지 않고 토스 주문 단건 조회 API로 상품·금액·결제 상태를 다시 확인한 뒤 주문을 완료합니다. 취소된 결제는 `결제 취소`로 표시하고 재고 예약에서 제외합니다.
+```text
+국민은행 000000-00-000000
+예금주 정슬기
+```
 
 ## 다른 PC에서 같은 Codex 작업 이어가기
 

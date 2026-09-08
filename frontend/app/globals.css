@@ -271,6 +271,7 @@ footer{background:#183f37;color:white;padding:35px 0;margin-top:30px}footer .she
 .market-checkout-modal h2{margin:6px 0 15px;font-size:23px;letter-spacing:-.8px}
 .market-checkout-total{display:flex;align-items:center;justify-content:space-between;margin:0 0 14px;border-radius:14px;background:#fff;padding:14px 16px;color:#61766e;font-size:12px}
 .market-checkout-total b{color:#a85f3c;font-size:19px}
+.market-bank-account{display:grid;gap:4px;margin-bottom:9px;border:1px solid #d7e3dd;border-radius:14px;background:#f8fbf9;padding:15px}.market-bank-account span{color:#5f746c;font-size:11px;font-weight:850}.market-bank-account b{color:#214f43;font-size:19px;letter-spacing:.4px}.market-bank-account small{color:#76877f;font-size:10px}.account-copy-button{width:100%;margin:0 0 14px;border:1px solid #9db9ae;border-radius:11px;background:#fff;padding:10px;color:var(--green);font-size:11px;font-weight:900;cursor:pointer}
 .market-checkout-modal>p{margin:0 0 18px;color:#687b74;font-size:12px;line-height:1.65}
 .market-checkout-modal>.primary{display:block;width:100%;box-sizing:border-box;text-decoration:none}
 .market-checkout-modal>.primary.secondary{background:#637a71}
