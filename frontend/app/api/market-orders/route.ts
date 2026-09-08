@@ -1,8 +1,9 @@
-import { desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, notInArray, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDb } from "../../../db";
 import { marketOrders, users } from "../../../db/schema";
 import { getGoogleUser } from "../../google-auth";
+import { createLinkPayProduct, isLinkPayConfigured } from "../toss/linkpay";
 
 const PRODUCTS: Record<string, { name: string; unitPrice: number | null; stock?: number }> = {
   "shine-muscat-3kg": { name: "고당도 샤인머스켓 3kg", unitPrice: 45000 },
@@ -41,7 +42,7 @@ export async function POST(request: Request) {
 
   const db = getDb();
   if (product.stock) {
-    const reserved = await db.select({ quantity: sql<number>`coalesce(sum(${marketOrders.quantity}), 0)` }).from(marketOrders).where(eq(marketOrders.productId, productId));
+    const reserved = await db.select({ quantity: sql<number>`coalesce(sum(${marketOrders.quantity}), 0)` }).from(marketOrders).where(and(eq(marketOrders.productId, productId), notInArray(marketOrders.status, ["payment_canceled"])));
     if (Number(reserved[0]?.quantity ?? 0) + quantity > product.stock) {
       return NextResponse.json({ error: "남은 예정 수량보다 많이 주문할 수 없어요." }, { status: 409 });
     }
@@ -61,7 +62,32 @@ export async function POST(request: Request) {
     status: "payment_pending",
   }).returning({ id: marketOrders.id, status: marketOrders.status });
 
-  return NextResponse.json({ order: { ...created[0], totalPrice: product.unitPrice * quantity } });
+  const order = created[0];
+  let paymentUrl: string | null = null;
+  if (order && isLinkPayConfigured()) {
+    try {
+      const linkPay = await createLinkPayProduct({
+        orderId: order.id,
+        name: `${product.name} ${quantity}개`,
+        amount: product.unitPrice * quantity,
+      });
+      if (linkPay) {
+        paymentUrl = linkPay.paymentUrl;
+        await db.update(marketOrders).set({
+          tossProductKey: linkPay.productKey,
+          paymentUrl: linkPay.paymentUrl,
+          tossPaymentStatus: "WAITING_FOR_PAYMENT",
+        }).where(eq(marketOrders.id, order.id));
+      }
+    } catch (error) {
+      console.error("Could not create Toss LinkPay product", error);
+    }
+  }
+
+  return NextResponse.json({
+    order: { ...order, totalPrice: product.unitPrice * quantity, paymentUrl },
+    paymentMode: paymentUrl ? "toss_linkpay" : "manual_transfer",
+  });
 }
 
 export async function PATCH(request: Request) {

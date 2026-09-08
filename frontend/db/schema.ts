@@ -187,6 +187,10 @@ export const marketOrders = sqliteTable("market_orders", {
   bedNumber: text("bed_number").notNull(),
   phone: text("phone").notNull(),
   status: text("status").notNull().default("payment_pending"),
+  tossProductKey: text("toss_product_key"),
+  tossOrderKey: text("toss_order_key"),
+  tossPaymentStatus: text("toss_payment_status"),
+  paymentUrl: text("payment_url"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
   confirmedAt: integer("confirmed_at", { mode: "timestamp" }),
 });
