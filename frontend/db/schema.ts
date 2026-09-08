@@ -175,3 +175,19 @@ export const communityRecipes = sqliteTable("community_recipes", {
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
 });
 
+export const marketOrders = sqliteTable("market_orders", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+  productId: text("product_id").notNull(),
+  productName: text("product_name").notNull(),
+  unitPrice: integer("unit_price").notNull(),
+  quantity: integer("quantity").notNull(),
+  customerName: text("customer_name").notNull(),
+  roomNumber: text("room_number").notNull(),
+  bedNumber: text("bed_number").notNull(),
+  phone: text("phone").notNull(),
+  status: text("status").notNull().default("payment_pending"),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+  confirmedAt: integer("confirmed_at", { mode: "timestamp" }),
+});
+

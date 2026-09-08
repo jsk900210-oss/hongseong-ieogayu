@@ -28,7 +28,17 @@ type ProfileMeta = { interests: string[]; activityScore: number; lastActiveAt: s
 type JoinMessage = { id: number; body: string; createdAt: string; userId: string; displayName: string };
 type IeumiSource = { label: string; url: string };
 type IeumiMessage = { id: number; role: "ieumi" | "user"; text: string; action?: Tab; actionLabel?: string; sources?: IeumiSource[] };
-type MarketList = "arrival" | "available";
+type MarketList = "arrival" | "available" | "orders";
+type MarketProduct = { id: string; name: string; icon: string; unitPrice: number | null; availability: string; stock?: string };
+type MarketOrder = { id: number; productName: string; unitPrice: number; quantity: number; customerName: string; roomNumber: string; bedNumber: string; phone: string; status: string; createdAt: string; confirmedAt: string | null };
+
+const MARKET_PRODUCTS: MarketProduct[] = [
+  { id: "shine-muscat-3kg", name: "고당도 샤인머스켓 3kg", icon: "🍇", unitPrice: 45000, availability: "상시주문" },
+  { id: "sweet-potato-5kg", name: "고구마 1박스 5kg", icon: "🍠", unitPrice: null, availability: "상시주문" },
+  { id: "potato-5kg", name: "감자 1박스 5kg", icon: "🥔", unitPrice: null, availability: "상시주문" },
+  { id: "radish-one", name: "무 1개", icon: "🥬", unitPrice: 3000, availability: "내일 입고 예정", stock: "10개 예정" },
+  { id: "beef-dashida-500g", name: "쇠고기 다시다 500g", icon: "🧂", unitPrice: 11000, availability: "내일 입고 예정", stock: "10개 예정" },
+];
 
 const IEUMI_SOURCES = {
   medicalCenter: { label: "홍성의료원 공식 안내", url: "https://hsmc.or.kr/language/helth/hong_01_04.php" },
@@ -78,6 +88,11 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
   const [creatingJoin, setCreatingJoin] = useState(false);
   const [showMiniMarket, setShowMiniMarket] = useState(false);
   const [marketList, setMarketList] = useState<MarketList>("arrival");
+  const [selectedMarketProduct, setSelectedMarketProduct] = useState<MarketProduct | null>(null);
+  const [marketOrderDraft, setMarketOrderDraft] = useState({ quantity: "1", customerName: user?.displayName ?? "", roomNumber: "", bedNumber: "", phone: "" });
+  const [submittingMarketOrder, setSubmittingMarketOrder] = useState(false);
+  const [marketOrders, setMarketOrders] = useState<MarketOrder[]>([]);
+  const [loadingMarketOrders, setLoadingMarketOrders] = useState(false);
   const [savingJoin, setSavingJoin] = useState(false);
   const [joinDraft, setJoinDraft] = useState({
     title: "",
@@ -302,6 +317,60 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
     setToast("Join을 삭제했어요.");
   };
 
+  const openMarketOrder = (product: MarketProduct) => {
+    if (product.unitPrice === null) {
+      setToast("가격이 확정된 뒤 주문할 수 있어요.");
+      window.setTimeout(() => setToast(""), 2200);
+      return;
+    }
+    setSelectedMarketProduct(product);
+    setMarketOrderDraft((current) => ({ ...current, quantity: "1", customerName: current.customerName || displayName || user?.displayName || "" }));
+    setShowMiniMarket(false);
+  };
+
+  const submitMarketOrder = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!selectedMarketProduct) return;
+    setSubmittingMarketOrder(true);
+    const response = await fetch("/api/market-orders", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ productId: selectedMarketProduct.id, ...marketOrderDraft }) });
+    const result = await response.json() as { order?: { id: number; totalPrice: number }; error?: string };
+    setSubmittingMarketOrder(false);
+    if (!response.ok || !result.order) {
+      setToast(result.error ?? "주문을 접수하지 못했어요.");
+      window.setTimeout(() => setToast(""), 2400);
+      return;
+    }
+    setSelectedMarketProduct(null);
+    setMarketOrderDraft((current) => ({ ...current, quantity: "1", roomNumber: "", bedNumber: "", phone: "" }));
+    setToast(`주문 ${result.order.id}번이 접수됐어요. 입금 확인 후 주문이 완료됩니다.`);
+    window.setTimeout(() => setToast(""), 4200);
+  };
+
+  const openMarketOrderManagement = async () => {
+    setMarketList("orders");
+    setLoadingMarketOrders(true);
+    const response = await fetch("/api/market-orders");
+    const result = await response.json() as { orders?: MarketOrder[]; error?: string };
+    setLoadingMarketOrders(false);
+    if (!response.ok) {
+      setToast(result.error ?? "주문 내역을 불러오지 못했어요.");
+      return;
+    }
+    setMarketOrders(result.orders ?? []);
+  };
+
+  const confirmMarketOrder = async (id: number) => {
+    const response = await fetch("/api/market-orders", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ id }) });
+    const result = await response.json() as { order?: { id: number; status: string; confirmedAt: string }; error?: string };
+    if (!response.ok || !result.order) {
+      setToast(result.error ?? "입금 확인을 반영하지 못했어요.");
+      return;
+    }
+    setMarketOrders((current) => current.map((order) => order.id === id ? { ...order, status: "completed", confirmedAt: result.order!.confirmedAt } : order));
+    setToast("입금 확인 후 주문 완료로 변경했어요.");
+    window.setTimeout(() => setToast(""), 2200);
+  };
+
   const submitQuestion = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const question = askQuestion.trim();
@@ -342,6 +411,22 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
       setIeumiMessages((current) => [...current, { id: Date.now() + 1, role: "ieumi", ...reply }]);
       setAskLoading(false);
     }, 350);
+  };
+
+  const renderMarketProduct = (product: MarketProduct) => (
+    <li key={product.id}>
+      <button type="button" disabled={product.unitPrice === null} onClick={() => openMarketOrder(product)}>
+        <span className="market-product-icon">{product.icon}</span>
+        <div><b>{product.name}</b><small>{product.unitPrice === null ? "가격 확정 후 주문 가능" : `${product.availability} · 눌러서 주문`}</small></div>
+        <strong className={product.unitPrice === null ? "price-pending" : ""}>{product.unitPrice === null ? "가격 미정" : `${product.unitPrice.toLocaleString("ko-KR")}원`}{product.stock && <small>{product.stock}</small>}</strong>
+      </button>
+    </li>
+  );
+
+  const renderMarketPanel = () => {
+    if (marketList === "available") return <div className="market-list-panel" role="tabpanel"><div className="market-empty"><span>🧺</span><b>현재 바로 구매 가능한 상품이 없어요.</b><p>상품이 입고되면 가격과 남은 수량, 구매 버튼이 여기에 표시됩니다.</p></div></div>;
+    if (marketList === "orders") return <div className="market-list-panel market-order-admin" role="tabpanel">{loadingMarketOrders ? <p className="market-order-loading">주문 내역을 불러오는 중이에요…</p> : marketOrders.length ? <ul>{marketOrders.map((order) => <li key={order.id}><div className="market-order-head"><b>#{order.id} · {order.productName}</b><span className={order.status === "completed" ? "completed" : "pending"}>{order.status === "completed" ? "주문 완료" : "입금 확인 대기"}</span></div><p>{order.quantity}개 · {(order.unitPrice * order.quantity).toLocaleString("ko-KR")}원</p><dl><div><dt>주문자</dt><dd>{order.customerName}</dd></div><div><dt>숙소</dt><dd>{order.roomNumber} / 침대 {order.bedNumber}</dd></div><div><dt>전화</dt><dd><a href={`tel:${order.phone}`}>{order.phone}</a></dd></div></dl>{order.status !== "completed" && <button type="button" onClick={() => confirmMarketOrder(order.id)}>입금 확인 · 주문 완료</button>}</li>)}</ul> : <div className="market-empty"><span>🧾</span><b>아직 접수된 주문이 없어요.</b><p>새 주문이 들어오면 이곳에서 입금을 확인할 수 있어요.</p></div>}</div>;
+    return <div className="market-list-panel" role="tabpanel"><div className="market-product-group"><h3><span>♻️</span> 상시주문 <small>주문 후 입고 일정을 안내해요</small></h3><ul className="market-product-list">{MARKET_PRODUCTS.filter((product) => product.availability === "상시주문").map(renderMarketProduct)}</ul></div><div className="market-product-group"><h3><span>📅</span> 내일 입고 예정 <small>총 20개 예정</small></h3><ul className="market-product-list">{MARKET_PRODUCTS.filter((product) => product.availability === "내일 입고 예정").map(renderMarketProduct)}</ul></div></div>;
   };
 
   return (
@@ -433,7 +518,8 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
 
       <nav className="mobile-nav" aria-label="주요 메뉴"><button className={tab === "home" ? "active" : ""} onClick={()=>move("home")}><span>🏠</span>홈</button><button className={tab === "place" ? "active" : ""} onClick={()=>move("place")}><span>🗺️</span>발견</button><button className="market-tab" type="button" onClick={()=>setShowMiniMarket(true)}><span>🧺</span>로컬마켓</button><button className="join-fab" onClick={()=>move("join")}><span>＋</span>Join</button><button className={tab === "profile" ? "active" : ""} onClick={()=>move("profile")}><span>👤</span>프로필</button></nav>
 
-      {showMiniMarket && <div className="modal-backdrop" role="presentation" onMouseDown={() => setShowMiniMarket(false)}><section className="market-modal" role="dialog" aria-modal="true" aria-labelledby="market-title" onMouseDown={(event) => event.stopPropagation()}><button className="modal-close" type="button" aria-label="닫기" onClick={() => setShowMiniMarket(false)}>×</button><span className="mini-label">HONGSEONG LOCAL MARKET</span><h2 id="market-title">홍성 로컬마켓</h2><p className="market-lead">상시 주문할 상품과 입고될 상품을 미리 확인하고, 준비된 상품은 바로 구매할 수 있어요.</p><div className="market-list-tabs" role="tablist" aria-label="로컬마켓 상품 목록"><button type="button" role="tab" aria-selected={marketList === "arrival"} className={marketList === "arrival" ? "active" : ""} onClick={() => setMarketList("arrival")}><span>📦</span><b>상시주문 &amp; 입고예정</b><small>5개 품목</small></button><button type="button" role="tab" aria-selected={marketList === "available"} className={marketList === "available" ? "active" : ""} onClick={() => setMarketList("available")}><span>🛒</span><b>바로 구매</b><small>현재 0개 품목</small></button></div>{marketList === "arrival" ? <div className="market-list-panel" role="tabpanel"><div className="market-product-group"><h3><span>♻️</span> 상시주문 <small>주문 후 입고 일정을 안내해요</small></h3><ul className="market-product-list"><li><span className="market-product-icon">🍇</span><div><b>고당도 샤인머스켓 3kg</b><small>상시주문</small></div><strong>45,000원</strong></li><li><span className="market-product-icon">🍠</span><div><b>고구마 1박스 5kg</b><small>상시주문</small></div><strong className="price-pending">가격 미정</strong></li><li><span className="market-product-icon">🥔</span><div><b>감자 1박스 5kg</b><small>상시주문</small></div><strong className="price-pending">가격 미정</strong></li></ul></div><div className="market-product-group"><h3><span>📅</span> 내일 입고 예정 <small>총 20개 예정</small></h3><ul className="market-product-list"><li><span className="market-product-icon">🥬</span><div><b>무 1개</b><small>내일 입고 예정</small></div><strong>3,000원<small>10개 예정</small></strong></li><li><span className="market-product-icon">🧂</span><div><b>쇠고기 다시다 500g</b><small>내일 입고 예정</small></div><strong>11,000원<small>10개 예정</small></strong></li></ul></div></div> : <div className="market-list-panel" role="tabpanel"><div className="market-empty"><span>🧺</span><b>현재 바로 구매 가능한 상품이 없어요.</b><p>상품이 입고되면 가격과 남은 수량, 구매 버튼이 여기에 표시됩니다.</p></div></div>}<aside className="market-shared-guide" aria-label="공용주방 이용 안내"><article><span>🧂</span><div><b>공용주방 기본양념</b><p>간장 · 소금 · 설탕 · 다시다 · 식용유</p></div></article><article><span>🧺</span><div><b>공용 식재료 사용 안내</b><p>냉장·냉동 모두 공용 바구니 안에 담긴 야채와 식재료만 사용할 수 있어요.</p></div></article></aside><div className="market-flow" aria-label="로컬마켓 이용 순서"><span><b>1</b>상품 확인</span><i>→</i><span><b>2</b>재고·금액 확인</span><i>→</i><span><b>3</b>입금 확인 후 수령</span></div><p className="market-footnote">시범 운영 중이며, 품목·수량은 실제 입고 상황에 따라 달라질 수 있어요.</p></section></div>}
+      {showMiniMarket && <div className="modal-backdrop" role="presentation" onMouseDown={() => setShowMiniMarket(false)}><section className="market-modal" role="dialog" aria-modal="true" aria-labelledby="market-title" onMouseDown={(event) => event.stopPropagation()}><button className="modal-close" type="button" aria-label="닫기" onClick={() => setShowMiniMarket(false)}>×</button><span className="mini-label">HONGSEONG LOCAL MARKET</span><h2 id="market-title">홍성 로컬마켓</h2><p className="market-lead">상품을 누르면 수량과 수령 정보를 입력해 주문할 수 있어요. 입금 확인 후 주문이 완료됩니다.</p><div className={`market-list-tabs ${profileMeta.memberType === "master" ? "has-admin" : ""}`} role="tablist" aria-label="로컬마켓 상품 목록"><button type="button" role="tab" aria-selected={marketList === "arrival"} className={marketList === "arrival" ? "active" : ""} onClick={() => setMarketList("arrival")}><span>📦</span><b>상시주문 &amp; 입고예정</b><small>5개 품목</small></button><button type="button" role="tab" aria-selected={marketList === "available"} className={marketList === "available" ? "active" : ""} onClick={() => setMarketList("available")}><span>🛒</span><b>바로 구매</b><small>현재 0개 품목</small></button>{profileMeta.memberType === "master" && <button type="button" role="tab" aria-selected={marketList === "orders"} className={marketList === "orders" ? "active" : ""} onClick={openMarketOrderManagement}><span>🧾</span><b>주문 관리</b><small>입금 확인</small></button>}</div>{renderMarketPanel()}<aside className="market-shared-guide" aria-label="공용주방 이용 안내"><article><span>🧂</span><div><b>공용주방 기본양념</b><p>간장 · 소금 · 설탕 · 다시다 · 식용유</p></div></article><article><span>🧺</span><div><b>공용 식재료 사용 안내</b><p>냉장·냉동 모두 공용 바구니 안에 담긴 야채와 식재료만 사용할 수 있어요.</p></div></article></aside><div className="market-flow" aria-label="로컬마켓 이용 순서"><span><b>1</b>상품·수량 선택</span><i>→</i><span><b>2</b>주문 정보 입력</span><i>→</i><span><b>3</b>입금 확인 후 완료</span></div><p className="market-footnote">시범 운영 중이며, 품목·수량은 실제 입고 상황에 따라 달라질 수 있어요.</p></section></div>}
+      {selectedMarketProduct && <div className="modal-backdrop" role="presentation" onMouseDown={() => setSelectedMarketProduct(null)}><section className="market-order-modal" role="dialog" aria-modal="true" aria-labelledby="market-order-title" onMouseDown={(event) => event.stopPropagation()}><button className="modal-close" type="button" aria-label="닫기" onClick={() => { setSelectedMarketProduct(null); setShowMiniMarket(true); }}>×</button><span className="mini-label">LOCAL MARKET ORDER</span><div className="market-order-product"><span>{selectedMarketProduct.icon}</span><div><small>{selectedMarketProduct.availability}</small><h2 id="market-order-title">{selectedMarketProduct.name}</h2><b>{selectedMarketProduct.unitPrice?.toLocaleString("ko-KR")}원</b></div></div><form onSubmit={submitMarketOrder}><label>주문 수량<input required type="number" min="1" max="20" inputMode="numeric" value={marketOrderDraft.quantity} onChange={(event) => setMarketOrderDraft({ ...marketOrderDraft, quantity: event.target.value })}/></label><label>주문자<input required maxLength={30} autoComplete="name" value={marketOrderDraft.customerName} onChange={(event) => setMarketOrderDraft({ ...marketOrderDraft, customerName: event.target.value })} placeholder="이름을 입력해 주세요"/></label><div className="market-order-room"><label>방 번호<input required maxLength={20} value={marketOrderDraft.roomNumber} onChange={(event) => setMarketOrderDraft({ ...marketOrderDraft, roomNumber: event.target.value })} placeholder="예: 201호"/></label><label>침대 번호<input required maxLength={20} value={marketOrderDraft.bedNumber} onChange={(event) => setMarketOrderDraft({ ...marketOrderDraft, bedNumber: event.target.value })} placeholder="예: A"/></label></div><label>전화번호<input required type="tel" maxLength={20} autoComplete="tel" inputMode="tel" value={marketOrderDraft.phone} onChange={(event) => setMarketOrderDraft({ ...marketOrderDraft, phone: event.target.value })} placeholder="010-0000-0000"/></label><div className="market-order-total"><span>결제 예정 금액</span><b>{((selectedMarketProduct.unitPrice ?? 0) * Math.max(1, Number(marketOrderDraft.quantity) || 1)).toLocaleString("ko-KR")}원</b></div><p>주문 접수 후 입금을 확인하면 주문이 완료돼요.</p><button className="primary" type="submit" disabled={submittingMarketOrder}>{submittingMarketOrder ? "주문 접수 중…" : "입금 확인 대기로 주문하기"}</button></form></section></div>}
       {creatingJoin && <div className="modal-backdrop" role="presentation" onMouseDown={() => setCreatingJoin(false)}><section className="join-modal" role="dialog" aria-modal="true" aria-labelledby="join-create-title" onMouseDown={(event) => event.stopPropagation()}><button className="modal-close" type="button" aria-label="닫기" onClick={() => setCreatingJoin(false)}>×</button><span className="mini-label">NEW JOIN</span><h2 id="join-create-title">새로운 Join 만들기</h2><p>함께하고 싶은 일정과 모집 내용을 알려주세요.</p><form onSubmit={saveJoin}><label>제목<input required maxLength={40} value={joinDraft.title} onChange={(event) => setJoinDraft({...joinDraft, title:event.target.value})} placeholder="예: 함께 오름 일몰 보러 가요" /></label><label>소개<textarea required maxLength={300} rows={4} value={joinDraft.description} onChange={(event) => setJoinDraft({...joinDraft, description:event.target.value})} placeholder="어떤 시간을 함께 보내고 싶은지 적어주세요" /></label><div className="form-grid"><label>장소<input required maxLength={60} value={joinDraft.location} onChange={(event) => setJoinDraft({...joinDraft, location:event.target.value})} placeholder="만나는 장소" /></label><label>주제<select value={joinDraft.keyword} onChange={(event) => setJoinDraft({...joinDraft, keyword:event.target.value})}><option>여행</option><option>맛집</option><option>산책</option><option>액티비티</option><option>기타</option></select></label><label>날짜<input required type="date" value={joinDraft.date} onChange={(event) => setJoinDraft({...joinDraft, date:event.target.value})} /></label><label>시간<input required type="time" value={joinDraft.time} onChange={(event) => setJoinDraft({...joinDraft, time:event.target.value})} /></label><label>모집 인원<input required type="number" min={2} max={20} value={joinDraft.max} onChange={(event) => setJoinDraft({...joinDraft, max:event.target.value})} /></label></div><button className="primary submit-join" type="submit" disabled={savingJoin}>{savingJoin ? "등록 중…" : "Join 등록하기"}</button></form></section></div>}
       {editingNickname && <div className="modal-backdrop" role="presentation" onMouseDown={() => setEditingNickname(false)}><section className="nickname-modal" role="dialog" aria-modal="true" aria-labelledby="nickname-title" onMouseDown={(event) => event.stopPropagation()}><button className="modal-close" type="button" aria-label="닫기" onClick={() => setEditingNickname(false)}>×</button><span className="mini-label">MY PROFILE</span><h2 id="nickname-title">닉네임 바꾸기</h2><p>Join과 프로필에 표시할 이름을 정해 주세요.</p><form onSubmit={saveNickname}><label htmlFor="nickname">닉네임</label><input id="nickname" autoFocus minLength={2} maxLength={20} value={nicknameDraft} onChange={(event) => setNicknameDraft(event.target.value)} placeholder="2~20자로 입력" /><small>{nicknameDraft.trim().length}/20</small><button className="primary" type="submit" disabled={savingNickname || nicknameDraft.trim().length < 2}>{savingNickname ? "저장 중…" : "닉네임 저장"}</button></form></section></div>}
       {activeChat && <div className="modal-backdrop" role="presentation" onMouseDown={() => setActiveChat(null)}><section className="join-chat-modal" role="dialog" aria-modal="true" aria-label={`${activeChat.title} 채팅`} onMouseDown={(event) => event.stopPropagation()}><button className="modal-close" type="button" aria-label="닫기" onClick={() => setActiveChat(null)}>×</button><span className="mini-label">JOIN CHAT · 참여자 전용</span><h2>{activeChat.title}</h2><p>이 채팅은 Join 호스트와 참여자만 볼 수 있어요.</p><div className="join-message-list">{messages.length ? messages.map((message) => <div key={message.id}><b>{message.displayName}</b><span>{message.body}</span><small>{new Date(message.createdAt).toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}</small></div>) : <em>아직 대화가 없어요. 먼저 인사를 건네 보세요.</em>}</div><form className="join-message-form" onSubmit={sendMessage}><input value={messageDraft} maxLength={500} onChange={(event) => setMessageDraft(event.target.value)} placeholder="참여자에게 메시지 보내기" /><button type="submit" disabled={sendingMessage || !messageDraft.trim()}>{sendingMessage ? "전송 중" : "보내기"}</button></form></section></div>}
