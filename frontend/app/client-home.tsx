@@ -352,7 +352,7 @@ export default function ClientHome({ user }: { user: GoogleUser | null }) {
       return;
     }
     setMarketCart((current) => ({ ...current, [product.id]: Math.min(20, (current[product.id] ?? 0) + 1) }));
-    setToast(`${product.name}을 장바구니에 담았어요.`);
+    setToast(`${product.name} 상품을 장바구니에 담았어요.`);
     window.setTimeout(() => setToast(""), 1400);
   };
 
