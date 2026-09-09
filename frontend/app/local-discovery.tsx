@@ -150,10 +150,10 @@ const CAMPING_SPOTS = [
 ] as const;
 const REVIEW_POINTS: readonly { name: string; category: string; icon: string; lat: number; lon: number }[] = [];
 const LIFESTYLE_POINTS: readonly { name: string; category: string; icon: string; lat: number; lon: number }[] = [];
-const CATEGORY_LABELS: Record<DiscoveryView, string> = { around: "전체 장소", nearby: "주변 편의시설", markets: "오일장", festivals: "축제", reviews: "메이트 추천 맛집", recommended: "메이트 추천 플레이스", hikes: "등산", camping: "캠핑", parking: "공영주차장" };
+const CATEGORY_LABELS: Record<DiscoveryView, string> = { around: "홍성 명소", nearby: "내 주변", markets: "오일장", festivals: "축제", reviews: "메이트 추천 맛집", recommended: "메이트 추천 플레이스", hikes: "등산", camping: "캠핑", parking: "공영주차장" };
 const CATEGORY_DESCRIPTIONS: Record<DiscoveryView, string> = {
-  around: "검수된 관광·생활·편의 장소 전체",
-  nearby: "카카오맵에 등록된 마트·편의점·카페 등 생활 장소",
+  around: "홍성에서 먼저 가볼 만한 대표 명소",
+  nearby: "현재 위치에서 찾는 카페·식당·생활 장소",
   markets: "장날과 위치가 확인된 전통시장",
   festivals: "개최 장소가 확인된 홍성 축제",
   reviews: "음식점·카페·베이커리 등 먹거리 장소",
@@ -375,7 +375,25 @@ function NearbyFacilities() {
 }
 
 function CampingGuide() {
-  return <section className="camping-guide"><div><span className="mini-label">CAMPING · BACKPACKING</span><h2>홍성에서 머무는 밤</h2><p>공식 등록된 야영장만 안내합니다. 산 정상·등산로의 무단 야영은 금지될 수 있어요.</p></div><div className="camping-grid">{CAMPING_SPOTS.map((camp) => <details key={camp.name}><summary><span>⛺</span><div><small>{camp.area} · {camp.type}</small><b>{camp.name}</b><p>상세 시설·예약 정보 보기</p></div><i>⌄</i></summary><div className="camping-detail"><p><b>주소</b>{camp.address}</p><p><b>문의</b>{camp.phone}</p><p><b>예약</b>{camp.reservation}</p><p><b>시설</b>{camp.facilities}</p><em>{camp.note}</em><a href={camp.source} target="_blank" rel="noreferrer">고캠핑 상세 정보 ↗</a></div></details>)}</div></section>;
+  const [mapPlaces, setMapPlaces] = useState<Array<{ id: string; name: string; category: string; icon: string; lat: number; lon: number }>>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [mapStatus, setMapStatus] = useState("캠핑장 위치를 불러오는 중이에요.");
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetch("/api/camping-places", { signal: controller.signal })
+      .then(async (response) => {
+        const body = await response.json() as { places?: Array<{ id: string; name: string; category: string; icon: string; lat: number; lon: number }>; error?: string };
+        if (!response.ok) throw new Error(body.error || "캠핑장 위치를 불러오지 못했어요.");
+        setMapPlaces(body.places ?? []);
+        setMapStatus(body.places?.length ? "지도에서 캠핑장을 눌러 위치를 확인해 보세요." : "확인된 캠핑장 위치를 준비 중이에요.");
+      })
+      .catch((error: unknown) => { if (!controller.signal.aborted) setMapStatus(error instanceof Error ? error.message : "캠핑장 위치를 불러오지 못했어요."); });
+    return () => controller.abort();
+  }, []);
+
+  const selected = mapPlaces.find((place) => place.id === selectedId);
+  return <section className="camping-guide"><div><span className="mini-label">CAMPING · BACKPACKING</span><h2>홍성에서 머무는 밤</h2><p>공식 등록된 야영장만 안내합니다. 산 정상·등산로의 무단 야영은 금지될 수 있어요.</p></div><div className="camping-map-panel"><div className="real-map gps-map gps-active"><HongseongMap userLocation={HONGSEONG_CENTER} items={mapPlaces} selectedKey={selectedId} onSelect={setSelectedId} />{selected && <article className="nearby-map-card camping-map-card"><button type="button" className="nearby-map-card-close" aria-label="캠핑장 정보 닫기" onClick={() => setSelectedId(null)}>×</button><span className="nearby-map-card-icon">⛺</span><div><small>{selected.category}</small><b>{selected.name}</b><p>공식 등록 정보와 예약 조건은 아래 상세 안내에서 확인해 주세요.</p></div></article>}</div><p>{mapStatus}</p></div><div className="camping-grid">{CAMPING_SPOTS.map((camp) => <details key={camp.name}><summary><span>⛺</span><div><small>{camp.area} · {camp.type}</small><b>{camp.name}</b><p>상세 시설·예약 정보 보기</p></div><i>⌄</i></summary><div className="camping-detail"><p><b>주소</b>{camp.address}</p><p><b>문의</b>{camp.phone}</p><p><b>예약</b>{camp.reservation}</p><p><b>시설</b>{camp.facilities}</p><em>{camp.note}</em><a href={camp.source} target="_blank" rel="noreferrer">고캠핑 상세 정보 ↗</a></div></details>)}</div></section>;
 }
 
 export default function LocalDiscovery({ displayName, signedIn, onRequireLogin }: { displayName: string; signedIn: boolean; onRequireLogin: () => void }) {
@@ -417,7 +435,7 @@ export default function LocalDiscovery({ displayName, signedIn, onRequireLogin }
     <h1>오늘의 홍성을 발견해요</h1>
     <p className="lead">장날과 축제 소식을 챙기고, 참가자가 직접 찾은 맛을 함께 기록해요.</p>
     <div className="discovery-tabs" role="tablist" aria-label="발견 메뉴">
-      {([['around','전체 장소','🗺️'],['nearby','주변 편의시설','🏪'],['markets','오일장','🏮'],['festivals','축제','🎉'],['parking','공영주차장','🅿️'],['reviews','메이트 추천 맛집','🥣'],['recommended','메이트 추천 플레이스','💚'],['hikes','등산','🥾'],['camping','캠핑','⛺']] as const).map(([key,label,icon]) =>
+      {([['around','홍성 명소','🗺️'],['nearby','내 주변','📍'],['markets','오일장','🏮'],['festivals','축제','🎉'],['parking','공영주차장','🅿️'],['reviews','메이트 추천 맛집','🥣'],['recommended','메이트 추천 플레이스','💚'],['hikes','등산','🥾'],['camping','캠핑','⛺']] as const).map(([key,label,icon]) =>
         <button key={key} role="tab" aria-selected={view === key} className={view === key ? "active" : ""} onClick={() => setView(key)}><span>{icon}</span>{label}</button>)}
     </div>
     {view === "camping" ? <CampingGuide /> : view === "nearby" ? <NearbyFacilities /> : <CategoryMapPanel view={view} />}
