@@ -200,7 +200,7 @@ const distanceKm = (from: UserLocation, to: { lat: number; lon: number }) => {
   return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 };
 
-function HongseongMap({ userLocation, items = PLACES, onSelect, selectedKey, focusNearby = false }: { userLocation: UserLocation; items?: readonly { id?: string; name: string; category: string; icon: string; lat: number; lon: number; special?: boolean }[]; onSelect?: (key: string) => void; selectedKey?: string | null; focusNearby?: boolean }) {
+function HongseongMap({ userLocation, items = PLACES, onSelect, selectedKey, focusNearby = false, numberedMarkers = focusNearby }: { userLocation: UserLocation; items?: readonly { id?: string; name: string; category: string; icon: string; lat: number; lon: number; special?: boolean }[]; onSelect?: (key: string) => void; selectedKey?: string | null; focusNearby?: boolean; numberedMarkers?: boolean }) {
   const mapElement = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<import("leaflet").Map | null>(null);
 
@@ -265,7 +265,7 @@ function HongseongMap({ userLocation, items = PLACES, onSelect, selectedKey, foc
         const special = "special" in place && place.special;
         const marker = L.divIcon({
           className: "leaflet-place-icon-shell",
-          html: `<span class="leaflet-place-icon${focusNearby ? " numbered" : ""}${special ? " special" : ""}">${focusNearby ? index + 1 : place.icon}</span>`,
+          html: `<span class="leaflet-place-icon${numberedMarkers ? " numbered" : ""}${special ? " special" : ""}">${numberedMarkers ? index + 1 : place.icon}</span>`,
           iconSize: place.name === "남당항" ? [49, 38] : [38, 38],
           iconAnchor: place.name === "남당항" ? [24, 34] : [19, 34],
         });
@@ -281,7 +281,7 @@ function HongseongMap({ userLocation, items = PLACES, onSelect, selectedKey, foc
     });
 
     return () => { disposed = true; mapInstance.current = null; map?.remove(); };
-  }, [userLocation, items, onSelect, focusNearby]);
+  }, [userLocation, items, onSelect, focusNearby, numberedMarkers]);
 
   useEffect(() => {
     if (!focusNearby || !selectedKey || !mapInstance.current) return;
@@ -363,7 +363,7 @@ function NearbyFacilities() {
     {locationMessage && <p className="nearby-location-message">{locationMessage}</p>}
     <div className="nearby-category-chips" role="tablist" aria-label="편의시설 분류">{NEARBY_CATEGORIES.map((item) => <button type="button" role="tab" aria-selected={category === item.key} key={item.key} className={category === item.key ? "active" : ""} onClick={() => chooseCategory(item.key)}><span>{item.icon}</span>{item.label}</button>)}</div>
     <div className="map-panel nearby-map-panel">
-      <div className="real-map gps-map gps-active"><HongseongMap userLocation={center} items={mapItems} onSelect={setSelectedId} selectedKey={selectedId} focusNearby />
+      <div className="real-map gps-map gps-active"><HongseongMap userLocation={center} items={mapItems} onSelect={setSelectedId} selectedKey={selectedId} focusNearby numberedMarkers={category !== "all"} />
         {selected && <article className="nearby-map-card" aria-live="polite"><button type="button" className="nearby-map-card-close" aria-label="장소 정보 닫기" onClick={() => setSelectedId(null)}>×</button><span className="nearby-map-card-icon">{nearbyPlaceIcon(selected)}</span><div><small>{selected.category}</small><b>{selected.name}</b><p>{selected.distance === null ? selected.roadAddress || selected.address : `${selected.distance < 1000 ? `${selected.distance}m` : `${(selected.distance / 1000).toFixed(1)}km`} · ${selected.roadAddress || selected.address}`}</p><nav>{selected.phone && <a href={`tel:${selected.phone}`}>전화하기</a>}<a href={selected.url} target="_blank" rel="noreferrer">카카오맵에서 보기 ↗</a></nav></div></article>}
       </div>
       <aside className="result-list ranked-place-list"><div className="result-head"><b>{NEARBY_CATEGORIES.find((item) => item.key === category)?.label} 주변</b><span>{loading ? "찾는 중…" : error ? "연결 확인 필요" : `${places.length}곳 · 가까운 순`}</span></div><div className="ranked-place-scroll">

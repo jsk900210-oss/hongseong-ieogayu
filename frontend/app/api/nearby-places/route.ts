@@ -31,17 +31,20 @@ const HONGSEONG = { west: 126.426, east: 126.773, south: 36.458, north: 36.673 }
 
 const inHongseong = (lat: number, lon: number) => lon >= HONGSEONG.west && lon <= HONGSEONG.east && lat >= HONGSEONG.south && lat <= HONGSEONG.north;
 
-async function search(categoryKey: CategoryKey, lat: number, lon: number, radius: number, apiKey: string) {
+async function search(categoryKey: CategoryKey, lat: number, lon: number, radius: number, apiKey: string, pages = 1) {
   const config = CATEGORY_SEARCH[categoryKey];
   const categorySearch = Boolean(config.categoryCode);
   const endpoint = categorySearch ? "https://dapi.kakao.com/v2/local/search/category.json" : "https://dapi.kakao.com/v2/local/search/keyword.json";
-  const params = new URLSearchParams({ x: String(lon), y: String(lat), radius: String(radius), sort: "distance", size: "15" });
-  if (config.categoryCode) params.set("category_group_code", config.categoryCode);
-  if (config.keyword) params.set("query", config.keyword);
-  const response = await fetch(`${endpoint}?${params}`, { headers: { Authorization: `KakaoAK ${apiKey}` } });
-  if (!response.ok) throw new Error(`Kakao Local API ${response.status}`);
-  const body = await response.json() as { documents?: KakaoDocument[] };
-  return (body.documents ?? []).map((place) => ({
+  const rows = await Promise.all(Array.from({ length: pages }, async (_, index) => {
+    const params = new URLSearchParams({ x: String(lon), y: String(lat), radius: String(radius), sort: "distance", size: "15", page: String(index + 1) });
+    if (config.categoryCode) params.set("category_group_code", config.categoryCode);
+    if (config.keyword) params.set("query", config.keyword);
+    const response = await fetch(`${endpoint}?${params}`, { headers: { Authorization: `KakaoAK ${apiKey}` } });
+    if (!response.ok) throw new Error(`Kakao Local API ${response.status}`);
+    const body = await response.json() as { documents?: KakaoDocument[] };
+    return body.documents ?? [];
+  }));
+  return rows.flat().map((place) => ({
     id: `${categoryKey}:${place.id}`,
     name: place.place_name,
     category: place.category_name || categoryKey,
@@ -74,10 +77,10 @@ export async function GET(request: Request) {
 
   try {
     const keys = category === "all" ? Object.keys(CATEGORY_SEARCH) as CategoryKey[] : [category as CategoryKey];
-    const rows = (await Promise.all(keys.map((key) => search(key, lat, lon, radius, apiKey)))).flat();
+    const rows = (await Promise.all(keys.map((key) => search(key, lat, lon, radius, apiKey, category === "all" ? 3 : 2)))).flat();
     const unique = [...new Map(rows.map((place) => [place.url || place.id.split(":")[1], place])).values()]
       .sort((a, b) => (a.distance ?? Number.MAX_SAFE_INTEGER) - (b.distance ?? Number.MAX_SAFE_INTEGER))
-      .slice(0, 60);
+      .slice(0, 120);
     return NextResponse.json({ places: unique, source: "kakao_local", center: { lat, lon }, radius }, {
       headers: { "Cache-Control": "public, max-age=60, s-maxage=300, stale-while-revalidate=600" },
     });
