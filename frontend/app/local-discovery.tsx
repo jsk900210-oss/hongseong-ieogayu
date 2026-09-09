@@ -261,11 +261,11 @@ function HongseongMap({ userLocation, items = PLACES, onSelect, selectedKey, foc
       });
       mapInstance.current = map;
 
-      items.forEach((place) => {
+      items.forEach((place, index) => {
         const special = "special" in place && place.special;
         const marker = L.divIcon({
           className: "leaflet-place-icon-shell",
-          html: `<span class="leaflet-place-icon${special ? " special" : ""}">${place.icon}</span>`,
+          html: `<span class="leaflet-place-icon${focusNearby ? " numbered" : ""}${special ? " special" : ""}">${focusNearby ? index + 1 : place.icon}</span>`,
           iconSize: place.name === "남당항" ? [49, 38] : [38, 38],
           iconAnchor: place.name === "남당항" ? [24, 34] : [19, 34],
         });
