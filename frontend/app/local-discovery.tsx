@@ -261,11 +261,11 @@ function HongseongMap({ userLocation, items = PLACES, onSelect, selectedKey, foc
       });
       mapInstance.current = map;
 
-      items.forEach((place, index) => {
+      items.forEach((place) => {
         const special = "special" in place && place.special;
         const marker = L.divIcon({
           className: "leaflet-place-icon-shell",
-          html: `<span class="leaflet-place-icon numbered${special ? " special" : ""}">${index + 1}</span>`,
+          html: `<span class="leaflet-place-icon${special ? " special" : ""}">${place.icon}</span>`,
           iconSize: place.name === "남당항" ? [49, 38] : [38, 38],
           iconAnchor: place.name === "남당항" ? [24, 34] : [19, 34],
         });
@@ -397,7 +397,7 @@ function CampingGuide() {
 }
 
 export default function LocalDiscovery({ displayName, signedIn, onRequireLogin }: { displayName: string; signedIn: boolean; onRequireLogin: () => void }) {
-  const [view, setView] = useState<DiscoveryView>("around");
+  const [view, setView] = useState<DiscoveryView>("nearby");
   const [reviews, setReviews] = useState(seedReviews);
   const [creating, setCreating] = useState(false);
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
@@ -435,9 +435,10 @@ export default function LocalDiscovery({ displayName, signedIn, onRequireLogin }
     <h1>오늘의 홍성을 발견해요</h1>
     <p className="lead">장날과 축제 소식을 챙기고, 참가자가 직접 찾은 맛을 함께 기록해요.</p>
     <div className="discovery-tabs" role="tablist" aria-label="발견 메뉴">
-      {([['around','홍성 명소','🗺️'],['nearby','내 주변','📍'],['markets','오일장','🏮'],['festivals','축제','🎉'],['parking','공영주차장','🅿️'],['reviews','메이트 추천 맛집','🥣'],['recommended','메이트 추천 플레이스','💚'],['hikes','등산','🥾'],['camping','캠핑','⛺']] as const).map(([key,label,icon]) =>
+      {([['nearby','내 주변','📍'],['around','홍성 명소','🗺️'],['markets','오일장','🏮'],['festivals','축제','🎉'],['parking','공영주차장','🅿️'],['hikes','등산','🥾'],['camping','캠핑','⛺']] as const).map(([key,label,icon]) =>
         <button key={key} role="tab" aria-selected={view === key} className={view === key ? "active" : ""} onClick={() => setView(key)}><span>{icon}</span>{label}</button>)}
     </div>
+    <div className="mate-discovery-links" aria-label="메이트 추천 바로가기"><span>메이트가 남긴 기록</span><button type="button" className={view === "reviews" ? "active" : ""} onClick={() => setView("reviews")}><b>🥣 메이트 추천 맛집</b><small>직접 먹어본 한 끼</small></button><button type="button" className={view === "recommended" ? "active" : ""} onClick={() => setView("recommended")}><b>💚 메이트 추천 플레이스</b><small>다시 가고 싶은 동네 장소</small></button></div>
     {view === "camping" ? <CampingGuide /> : view === "nearby" ? <NearbyFacilities /> : <CategoryMapPanel view={view} />}
 
     {view === "around" && <div className="map-panel"><div className={`real-map gps-map ${userLocation ? "gps-active" : "location-pending"}`}>{userLocation ? <HongseongMap userLocation={userLocation} /> : <div className="map-placeholder"><img className="brand-mark brand-icon" src="/brand/hongseong-station-ieum-icon.png" alt="홍성, 이어가유" /><b>내 위치에서 홍성을 발견해요</b><small>노트북은 Wi-Fi 기반 위치를 사용하며, 버튼을 누를 때만 권한을 요청합니다</small><button type="button" className="gps-button" onClick={findMe} disabled={locating}>{locating ? "위치 확인 중…" : "◎ 현재 위치로 보기"}</button>{locationMessage && <><em>{locationMessage}</em><button type="button" className="gps-fallback-button" onClick={() => { setUserLocation(HONGSEONG_CENTER); setLocationMessage(""); }}>홍성읍 기준으로 보기</button></>}</div>}</div><div className="result-list"><div className="result-head"><b>{userLocation ? "내 위치에서 얼마나 걸릴까요?" : `홍성 대표 장소 ${PLACES.length}곳`}</b><span>{userLocation ? `${PLACES.length}곳 · 직선거리 기준` : "위치를 켜면 거리를 표시해요"}</span></div>{PLACES.map((place)=><button key={place.name} className={"special" in place && place.special ? "special-place-row" : ""}><span className="place-icon mint">{place.icon}</span><span><small>{place.category}</small><b>{place.name}</b><p>{userLocation ? `현재 위치에서 약 ${distanceKm(userLocation, place).toFixed(1)}km` : "홍성에서 가볍게 다녀오기 좋은 곳"}</p></span></button>)}</div></div>}
